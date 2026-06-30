@@ -1,0 +1,2637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 손익 대시보드</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f7f5;color:#1a1a19;font-size:13px;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e5e3;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;gap:10px}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar h1{font-size:15px;font-weight:700;white-space:nowrap}
+.year-badge{font-size:10px;font-weight:600;background:#f0f0ee;color:#888;padding:2px 8px;border-radius:10px}
+.cost-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1a73e8;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.cost-btn:hover{background:#1557b0}
+.cost-btn svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.main{padding:18px 20px;transition:margin-right .3s}
+.main.shifted{transition:margin-right .2s}
+.sec-label{font-size:10px;font-weight:700;color:#888;letter-spacing:.07em;text-transform:uppercase;margin:0 0 5px}
+.badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:4px;font-weight:500;margin-left:5px;background:#e8f0fe;color:#1a73e8;vertical-align:middle}
+.arrow{text-align:center;font-size:15px;color:#bbb;padding:5px 0;margin:2px 0}
+.card{background:#fff;border:0.5px solid #e0e0de;border-radius:10px;margin-bottom:8px;overflow-x:auto}
+table{border-collapse:collapse;font-size:11.5px;white-space:nowrap;width:100%}
+th{font-weight:500;color:#777;text-align:right;padding:5px;border-bottom:1px solid #ececea;background:#fff}
+th.L{text-align:left}
+td{padding:4px 5px;border-bottom:0.5px solid #f2f2f0;text-align:right;color:#1a1a19;vertical-align:middle}
+td.L{text-align:left}
+td.name{font-weight:600;color:#1a1a19}
+td.rev{font-size:10px;text-align:left;color:#1a73e8}
+td.cost{font-size:10px;text-align:left;color:#c0392b}
+input[type=number]{width:80px;text-align:right;font-size:11px;padding:2px 4px;border:0.5px solid #d5d5d3;border-radius:3px;background:#fafaf9;color:#1a1a19;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{display:none}
+input[type=number]:focus{outline:none;border-color:#1a73e8;background:#fff}
+.sub{font-weight:700;color:#1a73e8}
+.sub-c{font-weight:700;color:#c0392b}
+.total-row td{font-weight:700;background:#f5f5f3;border-top:1px solid #ddd}
+.pos{color:#1e7e34}.neg{color:#c0392b}.warn{color:#d68910}.neu{color:#aaa}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.metric{background:#fff;border:0.5px solid #e0e0de;border-radius:8px;padding:10px 12px}
+.mlabel{font-size:10px;color:#888;margin-bottom:3px}
+.mval{font-size:17px;font-weight:700}
+.linked{font-size:9px;color:#aaa;border:0.5px solid #ddd;border-radius:2px;padding:0 4px;margin-left:3px}
+td.rev-sheet{color:#1a73e8;font-weight:600;background:#f0f8ff;font-size:11px;cursor:default;text-align:right}
+td.rev-sheet-empty{color:#ddd;font-size:11px;cursor:default;text-align:right}
+/* 3번 대시보드 수기입력 input - 매출/비용 공통 */
+#b3 input[type=number]{width:100%;box-sizing:border-box;border:1px solid #e0e0de;border-radius:4px;padding:3px 5px;font-size:11px;text-align:right;background:#fff;color:#1a1a19;-moz-appearance:textfield}
+#b3 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+#b3 input[type=number]:focus{outline:none;border-color:#1a73e8;background:#f8fbff}
+#b3 input.manual-rev{background:#f0fff4;color:#1e7d32;font-weight:600;border-color:#a8d5b5}
+#b3 input.manual-rev:focus{border-color:#1e7d32;background:#e6f4ea}
+#b3 input.sheet-rev{background:#f0f8ff;color:#1a73e8;font-weight:600;border-color:#aac4f5}
+#b3 input.sheet-rev:focus{border-color:#1a73e8}
+#b3 input.sheet-cost{background:#fff0f0;color:#c0392b;font-weight:600;border-color:#f5aaaa}
+#b3 input.sheet-cost:focus{border-color:#c0392b}
+/* 수기로 시트값 덮어쓴 상태 */
+#b3 input.override-rev{background:#fffde7;color:#e65100;font-weight:700;border-color:#ffcc80;border-width:1.5px}
+#b3 input.override-rev:focus{border-color:#e65100;background:#fff8e1}
+#b3 input.override-cost{background:#fffde7;color:#e65100;font-weight:700;border-color:#ffcc80;border-width:1.5px}
+#b3 input.override-cost:focus{border-color:#e65100;background:#fff8e1}
+/* 매출 읽기전용 td */
+#b3 td.rev-sheet{background:#f0f8ff;color:#1a73e8;font-weight:600;font-size:11px;text-align:right;cursor:default}
+#b3 td.rev-sheet-empty{color:#ccc;font-size:11px;text-align:right;cursor:text}
+#b3 td.rev-input-wrap{padding:0}
+#b3 td.rev-input-wrap input{border:none;border-radius:0;border-bottom:1.5px dashed #a8d5b5;background:#f0fff4}
+.flow-note{font-size:10px;color:#888;margin-bottom:7px;padding:5px 9px;background:#f0f6ff;border-left:3px solid #1a73e8;border-radius:0 4px 4px 0}
+
+/* 패널 */
+.panel{position:fixed;top:0;right:0;height:100vh;background:#fff;border-left:1px solid #e0e0de;z-index:200;display:none;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.08);min-width:320px;max-width:98vw;transition:none}
+.panel.open{display:flex}
+/* 리사이즈 핸들 */
+.panel-resize-handle{position:absolute;left:0;top:0;width:5px;height:100%;cursor:col-resize;z-index:10;background:transparent;transition:background .15s}
+.panel-resize-handle:hover,.panel-resize-handle.dragging{background:#1a73e820}
+.panel-resize-handle::after{content:'';position:absolute;left:1px;top:50%;transform:translateY(-50%);width:3px;height:40px;background:#d0d0de;border-radius:3px;opacity:0;transition:opacity .15s}
+.panel-resize-handle:hover::after,.panel-resize-handle.dragging::after{opacity:1}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:52px;border-bottom:1px solid #e5e5e3;flex-shrink:0}
+.ph h2{font-size:14px;font-weight:700}
+.xbtn{background:none;border:none;cursor:pointer;color:#888;padding:4px;display:flex;border-radius:4px}
+.xbtn:hover{background:#f5f5f3}
+.xbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabs{display:flex;border-bottom:1px solid #e5e5e3;flex-shrink:0;overflow-x:auto}
+.tab{flex-shrink:0;padding:10px 14px;font-size:11px;font-weight:600;color:#aaa;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:#1a73e8;border-bottom-color:#1a73e8}
+.pbody{flex:1;overflow-y:auto;padding:14px 16px}
+
+/* 교육별 */
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.sc{background:#f7f7f5;border-radius:8px;padding:10px 12px;border:0.5px solid #e8e8e6}
+.sc-l{font-size:9px;color:#888;margin-bottom:3px}
+.sc-v{font-size:15px;font-weight:700}
+.edu-block{border:0.5px solid #e8e8e6;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.edu-hd{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9f9f7;cursor:pointer;gap:8px}
+.edu-hd:hover{background:#f3f3f1}
+.edu-title{font-size:11.5px;font-weight:700}
+.edu-sub{font-size:9px;color:#aaa;margin-top:1px}
+.edu-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.edu-tot{font-size:13px;font-weight:700;color:#c0392b}
+.stb{font-size:9px;padding:1px 7px;border-radius:10px;font-weight:600}
+.st-done{background:#e6f4ea;color:#1e7e34}
+.st-ing{background:#e8f0fe;color:#1a73e8}
+.st-plan{background:#fef7e0;color:#b45309}
+.chv{font-size:12px;color:#aaa;transition:transform .2s}
+.chv.open{transform:rotate(180deg)}
+.edu-body{display:none;padding:8px 12px 10px}
+.edu-body.open{display:block}
+.item-hd{display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #e8e8e6;margin-top:6px}
+.item-l{font-size:11px;font-weight:700;color:#333}
+.item-v{font-size:11px;font-weight:700;color:#c0392b}
+.sub-row{display:flex;justify-content:space-between;padding:2px 0 2px 10px;border-bottom:0.5px dashed #f5f5f3}
+.sub-row:last-child{border-bottom:none}
+.sub-l{font-size:9.5px;color:#999}
+.sub-v{font-size:10px;color:#c0392b}
+
+/* 시트 연동 공통 */
+.sheet-section{margin-bottom:16px}
+.section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.section-hd-left{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#444}
+.psbadge{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600}
+.glink{font-size:10px;color:#1a73e8;text-decoration:none;display:flex;align-items:center;gap:3px}
+.glink:hover{text-decoration:underline}
+.glink svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* 자동갱신 바 */
+.auto-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#f0f8f0;border:0.5px solid #c8e6c9;border-radius:7px;margin-bottom:8px;gap:8px}
+.auto-left{display:flex;align-items:center;gap:6px;font-size:10px;color:#2e7d32;min-width:0}
+.auto-left svg{width:12px;height:12px;flex-shrink:0}
+.cd-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:16px;background:#e6f4ea;border-radius:3px;font-size:10px;font-weight:700;color:#1e7e34;padding:0 3px;margin-left:2px}
+.toggle-wrap{display:flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;font-size:10px;color:#555}
+.trk{width:28px;height:15px;background:#ccc;border-radius:8px;position:relative;transition:background .2s;flex-shrink:0}
+.trk.on{background:#34a853}
+.thm{width:11px;height:11px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.trk.on .thm{left:15px}
+
+/* 상태 바 */
+.sync-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#f9f9f7;border:0.5px solid #e0e0de;border-radius:7px;margin-bottom:8px;gap:8px}
+.sync-l{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden}
+.sync-l span{font-size:10px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.ss-ok{background:#e6f4ea;color:#1e7e34}
+.ss-err{background:#fce8e6;color:#c0392b}
+.ss-load{background:#e8f0fe;color:#1a73e8}
+.rbtn{display:flex;align-items:center;gap:4px;padding:4px 9px;border:0.5px solid #d0d0ce;border-radius:5px;background:#fff;color:#555;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0}
+.rbtn:hover{background:#f0f0ee}
+.rbtn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spin{animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 시트 테이블 */
+.sheet-wrap{border:0.5px solid #e0e0de;border-radius:8px;overflow:hidden}
+.sheet-info{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f0f8f0;border-bottom:0.5px solid #c8e6c9;font-size:10px;color:#2e7d32}
+.sht{width:100%;border-collapse:collapse;font-size:11px}
+.sht th{font-size:10px;font-weight:600;color:#888;padding:5px 7px;border-bottom:1px solid #ececea;text-align:left;background:#f9f9f7;white-space:nowrap}
+.sht td{padding:4px 7px;border-bottom:0.5px solid #f2f2f0;white-space:nowrap;color:#1a1a19}
+.sht tfoot td{font-weight:700;background:#f5f5f3;border-top:1px solid #ddd;padding:5px 7px}
+.pill{display:inline-block;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:600}
+.p-blue{background:#e8f0fe;color:#1a73e8}
+.p-green{background:#e6f4ea;color:#1e7e34}
+.p-red{background:#fce8e6;color:#c0392b}
+.p-gray{background:#f0f0ee;color:#666}
+.p-purple{background:#f3e8ff;color:#7c3aed}
+.p-orange{background:#fff3e0;color:#e65100}
+.empty{text-align:center;padding:24px;color:#bbb;font-size:11px;line-height:1.9}
+
+/* 설정 박스 */
+.setup-box{background:#fffbf0;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:10px}
+.setup-box h3{font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.setup-box ol{font-size:11px;color:#555;padding-left:18px;line-height:2.2}
+.setup-box code{background:#f0f0ee;padding:1px 5px;border-radius:3px;font-size:10px;font-family:monospace}
+.setup-box .gas-code{background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:10px 12px;font-size:10px;font-family:monospace;margin:8px 0;line-height:1.6;overflow-x:auto;white-space:pre}
+.setup-box .gas-code .kw{color:#569cd6}
+.setup-box .gas-code .str{color:#ce9178}
+.setup-box .gas-code .fn{color:#dcdcaa}
+.copy-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:0.5px solid #d0d0ce;border-radius:4px;background:#fff;color:#555;font-size:10px;cursor:pointer;margin-top:4px}
+.copy-btn:hover{background:#f0f0ee}
+.url-input-wrap{display:flex;gap:6px;margin-top:8px}
+.url-input-wrap input{flex:1;font-size:11px;padding:6px 8px;border:0.5px solid #d0d0ce;border-radius:5px;background:#fff;color:#1a1a19}
+.url-input-wrap input:focus{outline:none;border-color:#1a73e8}
+.url-input-wrap button{padding:6px 12px;border:none;border-radius:5px;background:#1a73e8;color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.url-input-wrap button:hover{background:#1557b0}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:150}
+.overlay.show{display:block}
+</style>
+</head>
+<body>
+<div class="overlay" id="ov" onclick="closePanel();closeRevPanel();closeReceiptPanel()"></div>
+
+<!-- ── 결재내역 패널 ── -->
+<div class="panel" id="receipt-panel">
+  <div class="panel-resize-handle" onmousedown="startPanelResize(event,this.closest('.panel'))"></div>
+  
+  <div class="ps-head">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+      <span style="font-size:18px">📋</span>
+      <div>
+        <div style="font-weight:700;font-size:14px">결재내역서</div>
+        <div style="font-size:10px;color:#888;margin-top:1px" id="receipt-subtitle">업체명 · 결제수단 기준</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button onclick="exportReceiptXlsx()" style="display:flex;align-items:center;gap:5px;padding:6px 13px;background:#1e7e34;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        엑셀 내보내기
+      </button>
+      <button onclick="closeReceiptPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;padding:0 4px">✕</button>
+    </div>
+  </div>
+
+  <!-- 필터 바 -->
+  <div style="padding:10px 16px;border-bottom:1px solid #eee;background:#fafaf8;display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:6px">
+      <label style="font-size:10px;color:#666;font-weight:600">업체</label>
+      <select id="receipt-firm-sel" onchange="renderReceipt()" style="font-size:11px;border:0.5px solid #d0d0ce;border-radius:5px;padding:4px 8px;background:#fff">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <label style="font-size:10px;color:#666;font-weight:600">교육명</label>
+      <select id="receipt-edu-sel" onchange="renderReceipt()" style="font-size:11px;border:0.5px solid #d0d0ce;border-radius:5px;padding:4px 8px;background:#fff">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <label style="font-size:10px;color:#666;font-weight:600">월</label>
+      <select id="receipt-month-sel" onchange="renderReceipt()" style="font-size:11px;border:0.5px solid #d0d0ce;border-radius:5px;padding:4px 8px;background:#fff">
+        <option value="">전체</option>
+        ${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join('')}
+      </select>
+    </div>
+    <div id="receipt-summary" style="margin-left:auto;font-size:11px;color:#555"></div>
+  </div>
+
+  <!-- 결재내역 본문 -->
+  <div id="receipt-body" style="flex:1;overflow-y:auto;padding:16px;background:#f5f5f3">
+    <div style="text-align:center;color:#bbb;padding:40px">데이터를 불러오는 중…</div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>📊 2026 손익 대시보드</h1>
+    <span class="year-badge">VAT 제외</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="cost-btn" style="background:#1e7e34" onclick="openRevPanel()">
+      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      매출일정표
+      <span class="ss ss-load" id="rev-sync-st" style="font-size:9px;margin-left:2px;background:rgba(255,255,255,.25);color:#fff">로딩</span>
+    </button>
+    <button class="cost-btn" onclick="openPanel()">
+      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 8h4M6 11h8"/></svg>
+      비용시트 바로가기
+    </button>
+    <button class="cost-btn" style="background:#5f35b2" onclick="openReceiptPanel()">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+      결재내역
+    </button>
+  </div>
+</div>
+
+<div class="main" id="main">
+  <div>
+    <div class="sec-label">1️⃣ 목표 대비 달성율 <span class="badge">3️⃣ 합계 연동</span></div>
+    <div class="metric-row">
+      <div class="metric"><div class="mlabel">2025년 달성금액</div><div class="mval" style="font-size:13px;color:#888">187,528,818</div></div>
+      <div class="metric"><div class="mlabel">2026년 발행금액 <span class="linked">3️⃣ 연동</span></div><div class="mval" id="s26" style="color:#1a73e8">—</div></div>
+      <div class="metric"><div class="mlabel">전년 대비</div><div class="mval" id="syoy" style="font-size:14px">—</div></div>
+    </div>
+    <div class="card">
+      <table><thead><tr>
+        <th class="L" style="min-width:110px">구분</th>
+        <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th>
+        <th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+        <th style="color:#1a73e8">소계</th>
+      </tr></thead><tbody id="b1"></tbody></table>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+  <div>
+    <div class="sec-label">2️⃣ 업체별 매출 및 이익률 <span class="badge">3️⃣ 소계 연동</span></div>
+    <div class="card">
+      <table><thead><tr>
+        <th class="L">#</th><th class="L" style="min-width:120px">업체명</th>
+        <th>매출</th><th>비용</th><th>손익</th><th>이익률</th>
+      </tr></thead><tbody id="b2"></tbody></table>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+  <div>
+    <div class="sec-label" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">3️⃣ 월별 매출·비용 현황 <span class="badge">📈 매출 시트 자동반영</span><button onclick="clearManualAll()" style="font-size:10px;background:#fff;border:0.5px solid #f5c6c6;border-radius:4px;padding:2px 9px;cursor:pointer;color:#c0392b;font-weight:600" title="수기 입력한 모든 값 삭제">🗑️ 수기입력 초기화</button></div>
+    <p class="flow-note">
+      <span style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;line-height:2">
+        <span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:3px;font-weight:700;font-size:10px">📡 시트</span> 자동반영 (읽기 전용이 아님 — 클릭해서 수정 가능)
+        &nbsp;|&nbsp;
+        <span style="background:#f0fff4;color:#1e7d32;padding:1px 6px;border-radius:3px;font-weight:700;font-size:10px">✏️ 수기</span> 시트 미연동 칸 직접 입력
+        &nbsp;|&nbsp;
+        <span style="background:#fffde7;color:#e65100;padding:1px 6px;border-radius:3px;font-weight:700;font-size:10px">✏️ 수정</span> 시트값 덮어씀 (값 지우면 시트값 복원)
+        &nbsp;|&nbsp; 🔄 새로고침해도 수기 입력 내용 유지
+      </span>
+    </p>
+    <div class="card">
+      <table><thead><tr>
+        <th class="L" style="min-width:100px">업체명</th><th class="L" style="min-width:34px">구분</th>
+        <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th>
+        <th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+        <th style="color:#1a73e8;min-width:80px">소계</th>
+      </tr></thead><tbody id="b3"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- 패널 -->
+<div class="panel" id="panel">
+  <div class="panel-resize-handle" onmousedown="startPanelResize(event,this.closest('.panel'))"></div>
+  
+  <div class="ph">
+    <h2>💸 비용시트</h2>
+    <button class="xbtn" onclick="closePanel()">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="tabs">
+    <div class="tab on" onclick="stab(this,'te')">교육별 비용현황</div>
+    <div class="tab" onclick="stab(this,'ts')">슬랙 비용</div>
+    <div class="tab" onclick="stab(this,'tg')">일반 비용</div>
+  </div>
+  <div class="pbody">
+
+    <!-- 교육별 -->
+    <div id="te">
+      <div class="sc-grid">
+        <div class="sc"><div class="sc-l">총 비용</div><div class="sc-v" id="c-tot" style="color:#c0392b">—</div></div>
+        <div class="sc"><div class="sc-l">진행 중</div><div class="sc-v" id="c-ing" style="color:#1a73e8">—</div></div>
+        <div class="sc"><div class="sc-l">완료</div><div class="sc-v" id="c-done" style="color:#1e7e34">—</div></div>
+        <div class="sc"><div class="sc-l">예정</div><div class="sc-v" id="c-plan" style="color:#d68910">—</div></div>
+      </div>
+      <div id="edu-list"></div>
+    </div>
+
+    <!-- 슬랙 비용 -->
+    <div id="ts" style="display:none">
+      <div class="section-hd">
+        <div class="section-hd-left">
+          슬랙 비용내역
+          <span class="psbadge" style="background:#1e7e34;color:#fff">📡 실시간 연동</span>
+        </div>
+        <a class="glink" href="https://docs.google.com/spreadsheets/d/1gs0LNT86aaxxR0M9QZhYsszvWlQ7aCNEtCqbUv04HiE/edit?gid=0#gid=0" target="_blank">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>시트 열기
+        </a>
+      </div>
+      <div id="slack-setup" style="display:none"></div>
+      <div id="slack-connected">
+        <div class="auto-bar">
+          <div class="auto-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            자동 갱신 &nbsp;<span class="cd-badge" id="slack-cd">60</span>초 후 업데이트
+          </div>
+          <div class="toggle-wrap" onclick="toggleAuto('slack')">
+            <span id="slack-auto-lbl">켜짐</span>
+            <div class="trk on" id="slack-trk"><div class="thm"></div></div>
+          </div>
+        </div>
+        <div class="sync-bar">
+          <div class="sync-l">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span id="slack-msg">데이터를 불러오는 중…</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="ss ss-load" id="slack-st">불러오는 중</span>
+            <button class="rbtn" onclick="fetchData('slack',true)">
+              <svg id="slack-spin" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              새로고침
+            </button>
+          </div>
+        </div>
+        <div id="slack-area"><div class="empty">⏳ 불러오는 중…</div></div>
+        <!-- 업체별 집계 요약 -->
+        <div id="slack-firm-summary" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- 일반 비용 -->
+    <div id="tg" style="display:none">
+      <div class="section-hd">
+        <div class="section-hd-left">
+          일반 비용내역
+          <span class="psbadge" style="background:#1e7e34;color:#fff">📡 실시간 연동</span>
+        </div>
+        <a class="glink" href="https://docs.google.com/spreadsheets/d/1gs0LNT86aaxxR0M9QZhYsszvWlQ7aCNEtCqbUv04HiE/edit?gid=2135752151#gid=2135752151" target="_blank">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>시트 열기
+        </a>
+      </div>
+      <div id="gen-setup" style="display:none"></div>
+      <div id="gen-connected">
+        <div class="auto-bar">
+          <div class="auto-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            자동 갱신 &nbsp;<span class="cd-badge" id="gen-cd">60</span>초 후 업데이트
+          </div>
+          <div class="toggle-wrap" onclick="toggleAuto('general')">
+            <span id="gen-auto-lbl">켜짐</span>
+            <div class="trk on" id="gen-trk"><div class="thm"></div></div>
+          </div>
+        </div>
+        <div class="sync-bar">
+          <div class="sync-l">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e65100" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span id="gen-msg">데이터를 불러오는 중…</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="ss ss-load" id="gen-st">불러오는 중</span>
+            <button class="rbtn" onclick="fetchData('general',true)">
+              <svg id="gen-spin" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              새로고침
+            </button>
+          </div>
+        </div>
+        <!-- 컬럼 탐지 현황 -->
+        <div id="gen-col-info" style="display:none;margin-bottom:8px;padding:7px 10px;background:#fff8f0;border:0.5px solid #fde68a;border-radius:7px;font-size:10px;color:#555;line-height:1.8"></div>
+        <div id="gen-area"><div class="empty">⏳ 불러오는 중…</div></div>
+        <!-- 업체별 집계 요약 -->
+        <div id="gen-firm-summary" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 매출일정표 패널 -->
+<div class="panel" id="rev-panel">
+  <div class="panel-resize-handle" onmousedown="startPanelResize(event,this.closest('.panel'))"></div>
+  
+  <div class="ph">
+    <h2>📈 매출일정표</h2>
+    <button class="xbtn" onclick="closeRevPanel()">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="pbody">
+    <div class="section-hd">
+      <div class="section-hd-left">
+        매출일정표 실시간 연동
+        <span class="psbadge" style="background:#1e7e34;color:#fff">📡 업체명 + 월 기준 자동집계</span>
+      </div>
+      <a class="glink" href="https://docs.google.com/spreadsheets/d/1m_28_7QBX8Z3wJwvdmGjB-JaJg8Mb85v/edit?gid=1879060113#gid=1879060113" target="_blank">
+        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>시트 열기
+      </a>
+    </div>
+    <div class="auto-bar" style="margin-top:8px">
+      <div class="auto-left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        자동 갱신 &nbsp;<span class="cd-badge" id="rev-cd">60</span>초 후 업데이트
+      </div>
+      <div class="toggle-wrap" onclick="toggleRevAuto()">
+        <span id="rev-auto-lbl">켜짐</span>
+        <div class="trk on" id="rev-trk"><div class="thm"></div></div>
+      </div>
+    </div>
+    <div class="sync-bar">
+      <div class="sync-l">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <span id="rev-sync-msg">데이터를 불러오는 중…</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="rbtn" onclick="fetchRevSheet(true)">
+          <svg id="rev-spin" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          새로고침
+        </button>
+      </div>
+    </div>
+    <!-- 시트 원본 테이블 미리보기 -->
+    <div id="rev-sheet-preview" style="margin-top:4px"></div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────
+   설정값
+───────────────────────────────────── */
+const SHEET_ID  = '1gs0LNT86aaxxR0M9QZhYsszvWlQ7aCNEtCqbUv04HiE';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
+const SHEET_GID = { slack: '0', general: '2135752151' };
+const SHEET_LABEL = { slack: '슬랙 비용', general: '일반 비용' };
+const INTERVAL  = 60; // 초
+
+// 매출일정표 시트
+const REV_SHEET_ID  = '1m_28_7QBX8Z3wJwvdmGjB-JaJg8Mb85v';
+const REV_SHEET_GID = '1879060113';
+const REV_INTERVAL  = 60; // 초
+let   revAutoTimer  = null;
+let   revCdTimer    = null;
+let   revAutoOn     = true;
+let   revRemaining  = REV_INTERVAL;
+
+// 금액 컬럼 후보 (헤더명)
+const AMT_COLS = {
+  slack:   ['비용(원)', '금액', '비용원', 'amount', '지출액', '지출금액', '결제금액', '합계금액', '금액(원)'],
+  general: ['실지급액', '실지급', 'actual', '실지급금액', '금액', '지출액', '비용', '금액(원)', '결제금액'],
+};
+const PAY_COLS = {
+  slack:   ['결제수단', 'pay', '결제방법', '지급수단'],
+  general: ['지급방식', 'pay', '결제수단', '지급방법', '결제방법'],
+};
+const ITEM_COLS = {
+  slack:   ['비용 항목', '비용항목', '항목', 'item', '내용', '적요', '세부내용'],
+  general: ['비용항목', '항목', 'item', '내용', '적요', '세부내용', '비용 항목'],
+};
+
+/* ─────────────────────────────────────
+   패널 / 탭
+───────────────────────────────────── */
+// ── 패널 기본 너비 (localStorage 저장/복원) ──
+const PANEL_DEFAULT_W = { panel:580, 'rev-panel':580, 'receipt-panel':680 };
+function getPanelW(id){ return +(localStorage.getItem('pw_'+id)||PANEL_DEFAULT_W[id]||580); }
+function setPanelW(id,w){
+  const clamped=Math.max(320,Math.min(w,window.innerWidth*0.97));
+  document.getElementById(id).style.width=clamped+'px';
+  localStorage.setItem('pw_'+id,clamped);
+  if(document.getElementById('main').classList.contains('shifted'))
+    document.getElementById('main').style.marginRight=clamped+'px';
+  return clamped;
+}
+function applyPanelW(id){
+  const w=getPanelW(id);
+  document.getElementById(id).style.width=w+'px';
+  return w;
+}
+
+function openPanel(){
+  const w=applyPanelW('panel');
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('ov').classList.add('show');
+  if(window.innerWidth>900){
+    document.getElementById('main').classList.add('shifted');
+    document.getElementById('main').style.marginRight=w+'px';
+  }
+  fetchData('slack'); fetchData('general');
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('ov').classList.remove('show');
+  document.getElementById('main').classList.remove('shifted');
+  document.getElementById('main').style.marginRight='';
+}
+function openRevPanel(){
+  const w=applyPanelW('rev-panel');
+  document.getElementById('rev-panel').classList.add('open');
+  document.getElementById('ov').classList.add('show');
+  if(window.innerWidth>900){
+    document.getElementById('main').classList.add('shifted');
+    document.getElementById('main').style.marginRight=w+'px';
+  }
+  fetchRevSheet();
+}
+function closeRevPanel(){
+  document.getElementById('rev-panel').classList.remove('open');
+  document.getElementById('ov').classList.remove('show');
+  document.getElementById('main').classList.remove('shifted');
+  document.getElementById('main').style.marginRight='';
+}
+function stab(el,id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
+  ['te','ts','tg'].forEach(t=>{ document.getElementById(t).style.display = t===id?'block':'none'; });
+  if(id==='ts') fetchData('slack');
+  if(id==='tg') fetchData('general');
+}
+
+/* ─────────────────────────────────────
+   gviz JSONP 데이터 fetch (CORS 우회)
+   — <script> 태그를 동적으로 삽입하여
+     Google Visualization Query API 사용
+───────────────────────────────────── */
+const _gvizCallbacks = {};
+
+function fetchData(type, force=false){
+  const isS   = type==='slack';
+  const msgEl = document.getElementById(isS?'slack-msg':'gen-msg');
+  const stEl  = document.getElementById(isS?'slack-st':'gen-st');
+  const spin  = document.getElementById(isS?'slack-spin':'gen-spin');
+  const area  = document.getElementById(isS?'slack-area':'gen-area');
+
+  // 항상 연결됨 UI 표시 (패널이 열려있지 않아도 백그라운드 fetch)
+  const setupEl = document.getElementById(isS?'slack-setup':'gen-setup');
+  const connEl  = document.getElementById(isS?'slack-connected':'gen-connected');
+  if(setupEl) setupEl.style.display='none';
+  if(connEl)  connEl.style.display='block';
+
+  if(stEl && msgEl) setStatus(stEl, msgEl, 'load', '불러오는 중', '구글 시트에서 데이터를 가져오는 중…');
+  if(spin) spin.classList.add('spin');
+
+  // 이전 pending 콜백 정리
+  const cbName = `_gviz_${type}`;
+  if(_gvizCallbacks[type]){ try{ delete window[cbName]; }catch(e){} }
+
+  const timer = setTimeout(()=>{
+    delete window[cbName];
+    if(spin) spin.classList.remove('spin');
+    if(stEl && msgEl) setStatus(stEl, msgEl, 'err', '시간 초과', '응답이 없습니다. 시트 공개 여부를 확인하세요.');
+    if(area) area.innerHTML = errHtml(type, '요청 시간이 초과되었습니다 (10초).<br><span style="font-size:10px;color:#888">구글 시트가 "링크 공유"로 설정되어 있어야 합니다.</span>');
+  }, 10000);
+
+  window[cbName] = function(resp){
+    clearTimeout(timer);
+    delete window[cbName];
+    if(spin) spin.classList.remove('spin');
+    try {
+      if(resp.status === 'error'){
+        const msg = resp.errors?.[0]?.detailed_message || resp.errors?.[0]?.message || '알 수 없는 오류';
+        throw new Error(msg);
+      }
+      const tbl  = resp.table;
+      const cols = tbl.cols.map(c => c.label || c.id);
+      const rows = tbl.rows.map(r =>
+        Object.fromEntries(cols.map((c,i) => {
+          const cell = r.c?.[i];
+          if(!cell) return [c, ''];
+          if(cell.v instanceof Date) return [c, cell.v];
+          return [c, cell.v ?? ''];
+        }))
+      ).filter(r => Object.values(r).some(v => v !== '' && v !== null));
+
+      if(rows.length === 0) throw new Error('empty');
+      if(stEl && msgEl) setStatus(stEl, msgEl, 'ok', '연동됨', `마지막 업데이트: ${nowStr()} · ${rows.length}건`);
+      if(area) area.innerHTML = renderData(rows, type);
+      cacheSheetRows(rows, type);
+      if(autoState[type].on) autoState[type].remaining = INTERVAL;
+    } catch(e){
+      const msg = e.message === 'empty' ? '시트에 데이터가 없습니다' : e.message.slice(0,80);
+      if(stEl && msgEl) setStatus(stEl, msgEl, e.message==='empty'?'ok':'err', e.message==='empty'?'연동됨':'오류', msg);
+      if(area) area.innerHTML = e.message==='empty'
+        ? '<div class="empty">📭 시트에 데이터가 없습니다.<br><span style="font-size:10px;color:#bbb">시트에 데이터를 입력하면 자동으로 여기에 표시됩니다.</span></div>'
+        : errHtml(type, msg);
+    }
+  };
+
+  // <script> 태그로 JSONP 요청
+  const oldScript = document.getElementById(`gviz-script-${type}`);
+  if(oldScript) oldScript.remove();
+  const gid  = SHEET_GID[type];
+  const url  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&gid=${gid}&t=${Date.now()}`;
+  const sc   = document.createElement('script');
+  sc.id      = `gviz-script-${type}`;
+  sc.src     = url;
+  sc.onerror = ()=>{
+    clearTimeout(timer);
+    delete window[cbName];
+    if(spin) spin.classList.remove('spin');
+    if(stEl && msgEl) setStatus(stEl, msgEl, 'err', '오류', '스크립트 로드 실패 — 네트워크 또는 시트 공개 여부 확인');
+    if(area) area.innerHTML = errHtml(type, '스크립트 로드에 실패했습니다.<br><span style="font-size:10px;color:#888">구글 시트를 "링크가 있는 모든 사용자"로 공개 설정하고 다시 시도하세요.</span>');
+  };
+  document.head.appendChild(sc);
+}
+
+function errHtml(type, msg){
+  return `<div class="empty">
+    ⚠️ 데이터를 불러오지 못했습니다.<br>
+    <span style="font-size:10px;color:#aaa">${msg}</span><br><br>
+    <strong style="font-size:10px;color:#555">해결 방법:</strong><br>
+    <span style="font-size:10px;color:#888">구글 시트 → 공유 → <strong>"링크가 있는 모든 사용자"</strong> (뷰어)</span><br><br>
+    <button onclick="fetchData('${type}',true)" style="padding:5px 14px;border:0.5px solid #1a73e8;border-radius:5px;background:#fff;color:#1a73e8;font-size:11px;cursor:pointer">다시 시도</button>
+  </div>`;
+}
+
+function setStatus(stEl, msgEl, type, label, msg){
+  stEl.textContent = label;
+  stEl.className = `ss ss-${type==='load'?'load':type==='ok'?'ok':'err'}`;
+  msgEl.textContent = msg;
+}
+function nowStr(){ return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }
+
+/* ─────────────────────────────────────
+   데이터 → 테이블 렌더
+───────────────────────────────────── */
+function findKey(obj, candidates){
+  const keys = Object.keys(obj);
+  for(const c of candidates){
+    const k = keys.find(k=>k.trim()===c.trim());
+    if(k) return k;
+  }
+  for(const c of candidates){
+    const k = keys.find(k=>k.includes(c)||c.includes(k));
+    if(k) return k;
+  }
+  return null;
+}
+
+const payPill = val => {
+  if(!val||val==='') return '—';
+  if(val.includes('법인')) return `<span class="pill p-red">${val}</span>`;
+  if(val.includes('개인')) return `<span class="pill p-green">${val}</span>`;
+  if(val.includes('세금')) return `<span class="pill p-purple">${val}</span>`;
+  if(val.includes('현금')) return `<span class="pill p-orange">${val}</span>`;
+  if(val.includes('정차')) return `<span class="pill p-gray">${val}</span>`;
+  return `<span class="pill p-gray">${val}</span>`;
+};
+
+function renderData(data, type){
+  if(!Array.isArray(data)||data.length===0)
+    return '<div class="empty">📭 시트에 데이터가 없습니다.<br><span style="font-size:10px;color:#bbb">시트에 데이터를 입력하면 자동으로 여기에 표시됩니다.</span></div>';
+
+  const sample = data[0];
+  const headers = Object.keys(sample);
+  const amtKey  = findKey(sample, AMT_COLS[type]);
+  const payKey  = findKey(sample, PAY_COLS[type]);
+  const itemKey = findKey(sample, ITEM_COLS[type]);
+  const FIRM_KEY_CANDIDATES = ['업체명','업체','거래처','고객사','기관명','기관','학교명','학교','고객','client','company','organization'];
+  const firmKey = findKey(sample, FIRM_KEY_CANDIDATES);
+
+  let total = 0;
+
+  let html = `
+    <div class="sheet-wrap">
+      <div class="sheet-info">
+        ✅ ${SHEET_LABEL[type]} · <strong>${data.length}건</strong>
+        &nbsp;|&nbsp;
+        <a href="${SHEET_URL}" target="_blank" style="color:#1a73e8;font-size:10px">시트에서 직접 편집 →</a>
+      </div>
+      <div style="overflow-x:auto;overflow-y:auto;max-height:420px">
+        <table class="sht" style="min-width:100%">
+          <thead style="position:sticky;top:0;z-index:2;background:#f9f9f7"><tr>${headers.map(h=>{
+            const isFirm = h===firmKey;
+            const isAmt  = h===amtKey;
+            return `<th${isFirm?' style="color:#1a73e8"':isAmt?' style="color:#c0392b"':''}>${h}</th>`;
+          }).join('')}</tr></thead>
+          <tbody>`;
+
+  data.forEach(row => {
+    html += '<tr>';
+    headers.forEach(h => {
+      let val = row[h];
+      let display = (val===null||val===undefined||val==='') ? '—'
+                  : (val instanceof Date) ? `${val.getFullYear()}.${val.getMonth()+1}.${val.getDate()}`
+                  : String(val);
+
+      if(h===amtKey){
+        const n = parseFloat(String(val).replace(/[^0-9.-]/g,''));
+        if(!isNaN(n)&&n!==0){ total+=n; display=`<span style="color:#c0392b;font-weight:600">${Math.round(n).toLocaleString('ko-KR')}</span>`; }
+        else display='—';
+        html += `<td style="text-align:right">${display}</td>`;
+      } else if(h===firmKey && display!=='—'){
+        // 업체명 컬럼: FIRMS 매핑 여부 표시
+        const nm = String(display).replace(/\s+/g,'').toLowerCase();
+        const matched = FIRMS.some(f=>{ const fn=f.name.replace(/\s+/g,'').toLowerCase(); return nm===fn||fn.includes(nm)||nm.includes(fn); });
+        html += `<td><span style="font-weight:600;color:${matched?'#1a73e8':'#e65100'}">${display}</span>${matched?'<span style="font-size:8px;background:#e8f0fe;color:#1a73e8;padding:1px 3px;border-radius:2px;margin-left:2px">매핑</span>':''}</td>`;
+      } else if(h===payKey){
+        html += `<td>${payPill(display==='—'?'':display)}</td>`;
+      } else if(h===itemKey && display!=='—'){
+        html += `<td><span class="pill p-blue">${display}</span></td>`;
+      } else {
+        html += `<td>${display}</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+
+  // 합계 footer
+  const amtIdx = headers.indexOf(amtKey);
+  let foot = '<tr>';
+  if(amtIdx>0) foot += `<td colspan="${amtIdx}" style="text-align:right;color:#888;font-size:10px">합계</td>`;
+  foot += `<td style="text-align:right;color:#c0392b;font-weight:700">${Math.round(total).toLocaleString('ko-KR')}원</td>`;
+  const remaining = headers.length - amtIdx - 1;
+  if(remaining>0) foot += `<td colspan="${remaining}"></td>`;
+  foot += '</tr>';
+
+  html += `</tbody><tfoot style="position:sticky;bottom:0;z-index:2">${foot}</tfoot></table></div></div>`;
+  return html;
+}
+
+/* ─────────────────────────────────────
+   자동 갱신
+───────────────────────────────────── */
+const autoState = {
+  slack:   { on:true, remaining:INTERVAL, cdTimer:null, fetchTimer:null },
+  general: { on:true, remaining:INTERVAL, cdTimer:null, fetchTimer:null },
+};
+
+function startAuto(type){
+  const s = autoState[type];
+  const cdEl = document.getElementById(type==='slack'?'slack-cd':'gen-cd');
+  clearInterval(s.cdTimer); clearInterval(s.fetchTimer);
+  s.remaining = INTERVAL;
+  // 즉시 1회 fetch
+  fetchData(type);
+  s.cdTimer = setInterval(()=>{
+    if(!s.on) return;
+    s.remaining = Math.max(0, s.remaining-1);
+    if(cdEl) cdEl.textContent = s.remaining;
+  }, 1000);
+  s.fetchTimer = setInterval(()=>{
+    if(!s.on) return;
+    s.remaining = INTERVAL;
+    fetchData(type, true);
+  }, INTERVAL*1000);
+}
+
+function stopAuto(type){
+  const s = autoState[type];
+  clearInterval(s.cdTimer); clearInterval(s.fetchTimer);
+  const cdEl = document.getElementById(type==='slack'?'slack-cd':'gen-cd');
+  if(cdEl) cdEl.textContent = '—';
+}
+
+function toggleAuto(type){
+  const s = autoState[type];
+  const trk = document.getElementById(type==='slack'?'slack-trk':'gen-trk');
+  const lbl = document.getElementById(type==='slack'?'slack-auto-lbl':'gen-auto-lbl');
+  s.on = !s.on;
+  if(s.on){ trk.classList.add('on'); lbl.textContent='켜짐'; startAuto(type); }
+  else    { trk.classList.remove('on'); lbl.textContent='꺼짐'; stopAuto(type); }
+}
+
+
+/* ─────────────────────────────────────
+   매출일정표 실시간 연동
+   - gviz JSONP → CORS 없이 작동
+   - 업체명 기준으로 매출 반영
+   - 기존 비용 데이터 보존
+   - 신규 업체 자동 추가
+───────────────────────────────────── */
+
+function setRevStatus(state, msg){
+  const msgEl = document.getElementById('rev-sync-msg');
+  const stEl  = document.getElementById('rev-sync-st');
+  if(msgEl) msgEl.textContent = msg;
+  if(stEl){
+    if(state==='ok'){
+      stEl.textContent='연동됨'; stEl.className='ss';
+      stEl.style.cssText='font-size:9px;margin-left:2px;background:rgba(255,255,255,.3);color:#fff;padding:1px 5px;border-radius:8px;font-weight:600';
+    } else if(state==='err'){
+      stEl.textContent='오류'; stEl.className='ss';
+      stEl.style.cssText='font-size:9px;margin-left:2px;background:rgba(220,50,50,.4);color:#fff;padding:1px 5px;border-radius:8px;font-weight:600';
+    } else {
+      stEl.textContent='로딩'; stEl.className='ss';
+      stEl.style.cssText='font-size:9px;margin-left:2px;background:rgba(255,255,255,.2);color:#fff;padding:1px 5px;border-radius:8px;font-weight:600';
+    }
+  }
+}
+
+function fetchRevSheet(force=false){
+  const spin = document.getElementById('rev-spin');
+  if(spin) spin.classList.add('spin');
+  setRevStatus('load','매출일정표에서 데이터를 가져오는 중…');
+
+  const cbName = '_gviz_rev_' + Date.now();
+  const timer = setTimeout(()=>{
+    delete window[cbName];
+    if(spin) spin.classList.remove('spin');
+    setRevStatus('err','응답 시간 초과 — 시트를 "링크 공유(뷰어)"로 설정하세요');
+  }, 15000);
+
+  window[cbName] = function(resp){
+    clearTimeout(timer);
+    delete window[cbName];
+    if(spin) spin.classList.remove('spin');
+    try{
+      if(!resp || resp.status==='error'){
+        const m = resp?.errors?.[0]?.detailed_message || resp?.errors?.[0]?.message || '응답 오류';
+        throw new Error(m);
+      }
+      const tbl = resp.table;
+      if(!tbl || !tbl.cols) throw new Error('시트 데이터 없음 — 공개 설정 확인 필요');
+
+      // 컬럼 라벨 추출 (label 우선, 없으면 id)
+      const rawCols = tbl.cols.map((c, ci) => {
+        const lbl = (c.label||'').trim();
+        return lbl || c.id || String.fromCharCode(65+ci);
+      });
+
+      // 모든 행 추출
+      const rawRows = (tbl.rows||[]).map(r =>
+        rawCols.map((_, i) => {
+          const cell = r.c ? r.c[i] : null;
+          if(!cell || cell.v === null || cell.v === undefined) return '';
+          return typeof cell.v === 'number' ? cell.v : String(cell.v).trim();
+        })
+      );
+
+      // 헤더 결정: 모두 A/B/C 형태면 첫 행을 헤더로
+      let cols, dataRows;
+      const allAutoId = rawCols.every(c => /^[A-Z]+$/.test(c));
+      if(allAutoId && rawRows.length > 0){
+        cols     = rawRows[0].map(v => String(v||'').trim());
+        dataRows = rawRows.slice(1);
+      } else {
+        cols     = rawCols;
+        dataRows = rawRows;
+      }
+
+      applyRevSheet(cols, dataRows); // updateRevPreview는 applyRevSheet 내부에서 탐지 정보 포함해 호출
+      const cnt = dataRows.filter(r=>r.some(v=>v!=='')).length;
+      setRevStatus('ok', `${nowStr()} 업데이트 · ${cnt}행`);
+      revRemaining = REV_INTERVAL;
+
+    } catch(e){
+      setRevStatus('err', e.message.slice(0,80));
+      console.error('[RevSheet]', e);
+    }
+  };
+
+  const oldSc = document.getElementById('gviz-script-rev');
+  if(oldSc) oldSc.remove();
+  const url = `https://docs.google.com/spreadsheets/d/${REV_SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${cbName}&gid=${REV_SHEET_GID}&headers=1&t=${Date.now()}`;
+  const sc  = document.createElement('script');
+  sc.id     = 'gviz-script-rev';
+  sc.src    = url;
+  sc.onerror= ()=>{
+    clearTimeout(timer); delete window[cbName];
+    if(spin) spin.classList.remove('spin');
+    setRevStatus('err','로드 실패 — 시트를 "링크가 있는 모든 사용자(뷰어)"로 공개 설정하세요');
+  };
+  document.head.appendChild(sc);
+}
+
+/* 패널 내 시트 미리보기 */
+/* ────────────────────────────────────────────────────
+   매출일정표 패널 미리보기 렌더
+   실제 시트 구조:
+     - 각 행 = 1건의 매출 청구 건
+     - 월 구분 컬럼: "26.01", "26.02" 형식 (연.월)
+     - 업체명 컬럼: 경남대학교, 강남AI스쿨 등
+     - 수신회사 / 사업명 / 품목 등 텍스트 컬럼
+     - 금액 컬럼: 공급가액 / 매출액 / 금액 등
+──────────────────────────────────────────────────── */
+
+function normRevName(n){
+  return String(n||'').replace(/\(.*?\)/g,'').replace(/\s+/g,'')
+    .replace(/(주식회사|유한회사|학교법인|재단법인|사단법인)/g,'').toLowerCase().trim();
+}
+
+// "월 구분" 값("26.01","2026.1","1월","01" 등) → monthIdx(0~11)
+function parseRevMonth(val){
+  if(val===null||val===undefined||val==='') return -1;
+  const s = String(val).trim();
+  // "26.01", "26.1", "2026.01", "2026.1"
+  let m = s.match(/^\d{2,4}[.\-\/](0?[1-9]|1[0-2])$/);
+  if(m){ const parts=s.split(/[.\-\/]/); return parseInt(parts[parts.length-1])-1; }
+  // "1월"~"12월"
+  m = s.match(/^(0?[1-9]|1[0-2])월$/);
+  if(m) return parseInt(m[1])-1;
+  // 순수 숫자
+  m = s.match(/^(0?[1-9]|1[0-2])$/);
+  if(m){ const n=parseInt(m[1]); if(n>=1&&n<=12) return n-1; }
+  // "2026-01-xx" 날짜
+  m = s.match(/^\d{4}[-\/](0?[1-9]|1[0-2])/);
+  if(m) return parseInt(m[1])-1;
+  return -1;
+}
+
+function updateRevPreview(cols, rows, detected){
+  const el = document.getElementById('rev-sheet-preview');
+  if(!el) return;
+  const validRows = rows.filter(r=>r.some(v=>v!==''&&v!==null));
+  if(!validRows.length){ el.innerHTML=''; return; }
+
+  const { monColIdx, nameColIdx, amtColIdx, issuerColIdx } = detected||{};
+
+  let html = `
+    <div class="sheet-wrap">
+      <div class="sheet-info" style="background:#f0f6ff;border-color:#c5d8f5;color:#1a73e8;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+        <span>📋 시트 원본 · <strong>${validRows.length}건</strong>
+          ${issuerColIdx>=0?`<span style="margin-left:6px;font-size:9px;background:#e6f4ea;color:#1e7e34;padding:1px 6px;border-radius:3px;font-weight:700">🏢 데이톤 발행분만 반영</span>`:''}
+        </span>
+        <span style="font-size:9px;color:#888">
+          월:<strong style="color:#1a73e8">${cols[monColIdx]||'?'}</strong>
+          &nbsp;업체:<strong style="color:#1a73e8">${cols[nameColIdx]||'?'}</strong>
+          &nbsp;금액:<strong style="color:#1a73e8">${cols[amtColIdx]||'?'}</strong>
+          ${issuerColIdx>=0?`&nbsp;발행:<strong style="color:#1e7e34">${cols[issuerColIdx]}</strong>`:''}
+        </span>
+      </div>
+      <div style="overflow-x:auto;overflow-y:auto;max-height:320px">
+        <table class="sht" style="min-width:100%">
+          <thead style="position:sticky;top:0;z-index:2;background:#f9f9f7"><tr>
+            ${cols.map((c,ci)=>{
+              const isKey = ci===monColIdx||ci===nameColIdx||ci===amtColIdx;
+              const isIssuer = ci===issuerColIdx;
+              return `<th style="${isKey?'color:#1a73e8;font-weight:700;background:#eef4ff':isIssuer?'color:#1e7e34;font-weight:700;background:#f0fff4':''}">${c||'—'}</th>`;
+            }).join('')}
+          </tr></thead><tbody>`;
+
+  validRows.forEach((r,ri)=>{
+    html+=`<tr style="${ri%2===1?'background:#fafafa':''}">${r.map((v,ci)=>{
+      const disp = (v===''||v===null)?'—':String(v);
+      const isKey=ci===monColIdx||ci===nameColIdx;
+      const isAmt=ci===amtColIdx;
+      const isIssuer=ci===issuerColIdx;
+      if(isKey) return `<td style="font-weight:600;color:#1a73e8">${disp}</td>`;
+      if(isAmt) return `<td style="text-align:right;color:#c0392b;font-weight:600">${typeof v==='number'?Math.round(v).toLocaleString('ko-KR'):disp}</td>`;
+      if(isIssuer){ const isDayton=disp.includes('데이톤')||disp.toLowerCase().includes('dayton'); return `<td style="font-weight:600;color:${isDayton?'#1e7e34':'#aaa'}">${disp}</td>`; }
+      return `<td>${disp}</td>`;
+    }).join('')}</tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+
+  if(detected&&detected.firmMap&&detected.firmMap.size>0){
+    const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    html+=`
+      <div style="margin-top:10px;border:0.5px solid #e0e0de;border-radius:8px;overflow:hidden">
+        <div style="padding:7px 10px;background:#f0f8f0;border-bottom:0.5px solid #c8e6c9;font-size:10px;font-weight:700;color:#2e7d32">
+          ✅ 업체별 월 매출 집계 → 대시보드 반영
+        </div>
+        <div style="overflow-x:auto"><table class="sht"><thead><tr>
+          <th>업체명</th>
+          ${MONTHS.map(m=>`<th style="text-align:right">${m}</th>`).join('')}
+          <th style="text-align:right;color:#1a73e8">합계</th>
+        </tr></thead><tbody>`;
+    detected.firmMap.forEach((rev,key)=>{
+      const total=rev.reduce((s,v)=>s+v,0);
+      const dispName=detected.nameMap?.get(key)||key;
+      html+=`<tr>
+        <td style="font-weight:600">${dispName}</td>
+        ${rev.map(v=>`<td style="text-align:right;${v>0?'color:#1a73e8':'color:#ddd'}">${v>0?v.toLocaleString('ko-KR'):'—'}</td>`).join('')}
+        <td style="text-align:right;font-weight:700;color:#1a73e8">${total?total.toLocaleString('ko-KR'):'—'}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+  }
+  el.innerHTML=html;
+}
+
+/* ────────────────────────────────────────────────────
+   시트 → FIRMS/ST 반영
+   실제 구조: 각 행 = 1건 매출, "월 구분" + "업체명" + 금액 컬럼
+──────────────────────────────────────────────────── */
+function applyRevSheet(cols, dataRows){
+
+  // ── 1. 컬럼 탐지 ──
+  const MON_COL_HINTS=['월 구분','월구분','월','month','날짜','일자','발행월','기준월','청구월'];
+  let monColIdx=cols.findIndex(c=>MON_COL_HINTS.some(h=>String(c).toLowerCase().replace(/\s/g,'').includes(h.replace(/\s/g,''))));
+  if(monColIdx<0){
+    const sample=dataRows.filter(r=>r.some(v=>v!==''&&v!==null)).slice(0,20);
+    for(let ci=0;ci<cols.length;ci++){
+      const hits=sample.filter(r=>parseRevMonth(r[ci])>=0).length;
+      if(hits>=sample.length*0.5){monColIdx=ci;break;}
+    }
+  }
+  if(monColIdx<0) monColIdx=0;
+
+  const NAME_HINTS=['업체명','업체','회사명','고객사','기관명','기관','학교명','거래처','client'];
+  let nameColIdx=cols.findIndex(c=>NAME_HINTS.some(h=>String(c).toLowerCase().replace(/\s/g,'').includes(h.replace(/\s/g,''))));
+  if(nameColIdx<0) nameColIdx=monColIdx===0?1:0;
+
+  const AMT_HINTS=['매출 금액','공급가액','공급가','매출액','금액(원)','금액','amount','합계금액','청구금액','공급금액','vat제외'];
+  let amtColIdx=cols.findIndex(c=>AMT_HINTS.some(h=>String(c).toLowerCase().replace(/\s/g,'').includes(h.replace(/\s/g,''))));
+  if(amtColIdx<0){
+    const sample=dataRows.filter(r=>r.some(v=>v!==''&&v!==null)).slice(0,30);
+    let bestCi=-1,bestScore=0;
+    cols.forEach((_,ci)=>{
+      if(ci===monColIdx||ci===nameColIdx) return;
+      const score=sample.filter(r=>{
+        const v=r[ci];
+        if(typeof v==='number') return v>0;
+        const n=parseFloat(String(v||'').replace(/[,\s]/g,'').replace(/[^0-9.-]/g,''));
+        return !isNaN(n)&&n>10000;
+      }).length;
+      if(score>bestScore){bestScore=score;bestCi=ci;}
+    });
+    if(bestCi>=0) amtColIdx=bestCi;
+  }
+
+  // ── 2. 발행회사 컬럼 탐지 → '데이톤' 행만 집계 ──
+  const ISSUER_HINTS=['발행회사','발행사','발행처','발행','issuer','공급자','공급사'];
+  let issuerColIdx=cols.findIndex(c=>ISSUER_HINTS.some(h=>String(c).toLowerCase().replace(/\s/g,'').includes(h.replace(/\s/g,''))));
+
+  // 수신회사 컬럼 탐지 (업체명 없는 행의 폴백)
+  const RECV_HINTS=['수신회사','수신처','청구처','발주처'];
+  let recvColIdx=cols.findIndex(c=>RECV_HINTS.some(h=>String(c).toLowerCase().replace(/\s/g,'').includes(h.replace(/\s/g,''))));
+
+  console.log('[RevSheet] 탐지→ 월구분:',monColIdx,`(${cols[monColIdx]})`, '업체:',nameColIdx,`(${cols[nameColIdx]})`, '금액:',amtColIdx,`(${cols[amtColIdx]})`, '발행회사:',issuerColIdx,issuerColIdx>=0?`(${cols[issuerColIdx]})`:'(미탐지)');
+
+  // ── 3. 행별 집계: 업체명+월 기준, 발행회사='데이톤' 필터 ──
+  const firmMap=new Map(); // normKey → rev[12]
+  const nameMap=new Map(); // normKey → 표시명
+  let lastFirmName='';
+
+  // 발행회사 컬럼이 없으면 필터 없이 전체 반영 (하위호환)
+  const useIssuerFilter = issuerColIdx >= 0;
+
+  dataRows.forEach(row=>{
+    if(!row.some(v=>v!==''&&v!==null)) return;
+
+    // 발행회사 필터: '데이톤'만 처리
+    if(useIssuerFilter){
+      const issuer=String(row[issuerColIdx]||'').trim();
+      // 빈 셀이면 이전 행 필터 결과 그대로 이어감 (병합셀 대응)
+      if(issuer && !issuer.toLowerCase().includes('데이톤') && !issuer.toLowerCase().includes('dayton')) return;
+    }
+
+    // 월 파싱
+    const mi=parseRevMonth(row[monColIdx]);
+    if(mi<0||mi>11) return;
+
+    // 업체명: 직접 컬럼 → 빈 셀이면 이전 값(병합셀) → 수신회사 폴백
+    const rawName=String(row[nameColIdx]||'').trim();
+    const rawRecv=recvColIdx>=0?String(row[recvColIdx]||'').trim():'';
+    if(rawName && rawName!=='—' && rawName!=='-') lastFirmName=rawName;
+    const firmName=lastFirmName||rawRecv;
+
+    if(!firmName) return;
+    if(/^(합계|소계|total|합산|월별|—|-{2,})$/i.test(firmName)) return;
+
+    if(amtColIdx<0) return;
+    const amtRaw=row[amtColIdx];
+    const amt=typeof amtRaw==='number'?amtRaw
+      :parseFloat(String(amtRaw||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+    if(isNaN(amt)||amt<=0) return;
+
+    const key=normRevName(firmName);
+    if(!firmMap.has(key)){firmMap.set(key,Array(12).fill(0));nameMap.set(key,firmName);}
+    firmMap.get(key)[mi]+=Math.round(amt);
+  });
+
+  if(!firmMap.size){
+    console.warn('[RevSheet] 집계 결과 없음. 컬럼→',cols[monColIdx],cols[nameColIdx],cols[amtColIdx]);
+    updateRevPreview(cols,dataRows,{monColIdx,nameColIdx,amtColIdx,issuerColIdx});
+    return;
+  }
+
+  // ── 4. FIRMS/ST 반영 ──
+  // 현재 비용 스냅샷 저장 (갱신 후에도 비용 데이터 보존)
+  FIRMS.forEach((f,i)=>{COST_SNAPSHOT[f.name]=[...ST[i].cost];});
+
+  const nF=[],nS=[],nN=[];
+
+  // 시트에 있는 업체: 매출은 시트값, 비용은 스냅샷 유지
+  firmMap.forEach((rev,key)=>{
+    const dispName=nameMap.get(key);
+    // 기존 FIRMS에서 같은 업체 찾기 (정규화 이름 매칭)
+    const ei=FIRMS.findIndex(f=>normRevName(f.name)===key||normRevName(f.name).includes(key)||key.includes(normRevName(f.name)));
+    const existingName=ei>=0?FIRMS[ei].name:dispName;
+    const cost=COST_SNAPSHOT[existingName]||Array(12).fill(0);
+    nF.push({name:existingName,rev:[...rev],cost:[...cost]});
+    nS.push({rev:[...rev],cost:[...cost]});
+    nN.push('');
+  });
+
+  // 시트에 없지만 비용만 있는 기존 업체도 유지 (매출 0, 비용 보존)
+  FIRMS.forEach((f,fi)=>{
+    const fkey=normRevName(f.name);
+    const alreadyAdded=nF.some(x=>normRevName(x.name)===fkey||normRevName(x.name).includes(fkey)||fkey.includes(normRevName(x.name)));
+    if(!alreadyAdded){
+      const cost=COST_SNAPSHOT[f.name]||Array(12).fill(0);
+      // 비용이 하나라도 있는 경우만 추가
+      if(cost.some(v=>v>0)){
+        nF.push({name:f.name,rev:Array(12).fill(0),cost:[...cost]});
+        nS.push({rev:Array(12).fill(0),cost:[...cost]});
+        nN.push('');
+      }
+    }
+  });
+
+  FIRMS.length=0;ST.length=0;NOTE.length=0;
+  nF.forEach((f,i)=>{
+    FIRMS.push({name:f.name,rev:[...f.rev],cost:[...f.cost]});
+    ST.push({rev:[...nS[i].rev],cost:[...nS[i].cost]});
+    NOTE.push(nN[i]);
+  });
+
+  // ── 5. 패널 미리보기 갱신 + 대시보드 업데이트 ──
+  updateRevPreview(cols,dataRows,{monColIdx,nameColIdx,recvColIdx,amtColIdx,issuerColIdx,firmMap,nameMap});
+  mergeManual();  // 수기 입력값 병합 (시트값 없는 달만)
+  buildT3();upd();
+}
+
+
+function startRevAuto(){
+  clearInterval(revCdTimer); clearInterval(revAutoTimer);
+  revRemaining = REV_INTERVAL;
+  revCdTimer = setInterval(()=>{
+    if(!revAutoOn) return;
+    revRemaining = Math.max(0, revRemaining-1);
+    const el = document.getElementById('rev-cd');
+    if(el) el.textContent = revRemaining;
+  }, 1000);
+  revAutoTimer = setInterval(()=>{
+    if(!revAutoOn) return;
+    fetchRevSheet(true);
+  }, REV_INTERVAL*1000);
+}
+
+function toggleRevAuto(){
+  revAutoOn = !revAutoOn;
+  const trk = document.getElementById('rev-trk');
+  const lbl = document.getElementById('rev-auto-lbl');
+  if(revAutoOn){ trk.classList.add('on'); lbl.textContent='켜짐'; startRevAuto(); fetchRevSheet(); }
+  else{ trk.classList.remove('on'); lbl.textContent='꺼짐'; clearInterval(revCdTimer); clearInterval(revAutoTimer); const cd=document.getElementById('rev-cd'); if(cd)cd.textContent='—'; }
+}
+
+/* ─────────────────────────────────────
+   비용시트 데이터 → EDU·ST 반영
+───────────────────────────────────── */
+
+
+// EDU 항목 카테고리 키워드 매핑
+const EDU_CAT_MAP = [
+  { key:'🍽️ 식대',    words:['식대','간식','음료','식비','식사','밥'] },
+  { key:'🚗 교통비',   words:['교통','이동','출장교통','차량'] },
+  { key:'🏘️ 숙박비',  words:['숙박','호텔','숙소'] },
+  { key:'💻 IT/장비',  words:['it','장비','구독','툴','소프트','sw','pc','노트북','기기'] },
+  { key:'📚 교육/마케팅', words:['교육','마케팅','시상','굿즈','홍보','광고','인쇄'] },
+  { key:'🏢 기타',     words:['기타','우편','사무용품','잡비','소모품'] },
+  { key:'🧑‍🏫 강사비', words:['강사','심사','멘토','강의','튜터'] },
+];
+
+function catFromItem(itemStr){
+  const s = String(itemStr||'').toLowerCase();
+  for(const cat of EDU_CAT_MAP){
+    if(cat.words.some(w => s.includes(w))) return cat.key;
+  }
+  return '🏢 기타';
+}
+
+// 날짜/월 파싱 (반환: 0~11, 실패: -1)
+function parseMonth(val){
+  if(val===null||val===undefined||val==='') return -1;
+
+  // JavaScript Date 객체 (gviz cell.v가 Date일 때)
+  if(val instanceof Date) return isNaN(val)?-1:val.getMonth();
+
+  if(typeof val==='number'){
+    // 1~12: 집행월 컬럼에 숫자로 직접 월 입력한 경우 (일반비용 시트)
+    if(val>=1&&val<=12) return val-1;
+    // Excel/Sheets serial date
+    if(val>44000&&val<=100000){
+      const d=new Date(Math.round((val-25569)*86400000));
+      const m=d.getMonth(); return (m>=0&&m<12)?m:-1;
+    }
+    return -1;
+  }
+
+  const s=String(val).trim();
+  if(!s||s==='—'||s==='-') return -1;
+
+  // Date 객체 .toString() "Mon May 19 2026 ..."
+  const MON_EN=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const toStrMatch=s.match(/^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+([A-Za-z]{3})\s+\d/i);
+  if(toStrMatch){ const i=MON_EN.indexOf(toStrMatch[1].toLowerCase()); if(i>=0) return i; }
+
+  // "Date(2026,4,19)" — gviz JSON (월 0-based)
+  const dMatch=s.match(/Date\((\d{4}),(\d{1,2}),(\d{1,2})\)/);
+  if(dMatch) return parseInt(dMatch[2]);
+
+  // "2026-05-19", "2026/05/19", "2026.05.19"
+  let m=s.match(/20\d{2}[-./](0?[1-9]|1[0-2])/);
+  if(m) return parseInt(m[1])-1;
+
+  // "26.06", "26.6" — 매출시트 형식
+  m=s.match(/^\d{2}[./](0?[1-9]|1[0-2])$/);
+  if(m){ const parts=s.split(/[./]/); return parseInt(parts[1])-1; }
+
+  // "6월 29일", "05월", "6월", "06월"
+  m=s.match(/(0?[1-9]|1[0-2])월/);
+  if(m) return parseInt(m[1])-1;
+
+  // 순수 숫자 문자열 "1"~"12" (집행월 컬럼)
+  m=s.match(/^(0?[1-9]|1[0-2])$/);
+  if(m){ const n=parseInt(m[1]); if(n>=1&&n<=12) return n-1; }
+
+  // ISO "2026-05-19T..."
+  m=s.match(/^\d{4}-(\d{2})-\d{2}/);
+  if(m) return parseInt(m[1])-1;
+
+  return -1;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  비용시트 처리 파이프라인
+//  흐름: fetchData → cacheSheetRows → applySheetCost → buildEdu / upd
+//
+//  핵심 매칭 기준:
+//    업체명 컬럼  → FIRMS 인덱스 (손익 대시보드 3번 비용 반영)
+//    업체명+교육명 → EDU 인덱스  (교육별 비용현황 패널 반영)
+//    날짜/월 컬럼 → monthIdx(0~11) (월별 집계)
+//    비용항목 컬럼 → EDU_CAT_MAP 카테고리
+// ─────────────────────────────────────────────────────────────────
+
+// 각 타입별 캐시
+const costSheetCache = { slack: [], general: [] };
+
+// ── 정규화 헬퍼 ──
+function _nm(s){ return String(s||'').replace(/\s+/g,'').replace(/[()\[\]]/g,'').toLowerCase(); }
+
+// ── EDU 인덱스 매칭 (org 또는 name으로) ──
+function matchEduIdx(str){
+  if(!str||str.length<2) return -1;
+  const ns=_nm(str);
+  // 1. org 포함 매칭
+  for(let i=0;i<EDU.length;i++){
+    const no=_nm(EDU[i].org), nn=_nm(EDU[i].name);
+    if(ns.includes(no)||no.includes(ns)) return i;
+    if(ns.includes(nn)||nn.includes(ns)) return i;
+  }
+  // 2. 앞 3글자 약칭
+  for(let i=0;i<EDU.length;i++){
+    const no=_nm(EDU[i].org);
+    if(no.length>=3 && ns.startsWith(no.slice(0,3))) return i;
+  }
+  return -1;
+}
+
+// ── cacheSheetRows: 시트 rows → 표준화 캐시 저장 ──
+function cacheSheetRows(rows, type){
+  if(!rows.length){ costSheetCache[type]=[]; applySheetCost(); return; }
+  const sample = rows[0];
+  const keys   = Object.keys(sample);
+
+  // 헤더 키워드 매칭 (정규화 포함·부분일치)
+  function pick(candidates){
+    // 1순위: 정확히 포함
+    for(const c of candidates){
+      const nc=_nm(c);
+      const k=keys.find(k=>_nm(k)===nc||_nm(k).includes(nc)||nc.includes(_nm(k)));
+      if(k) return k;
+    }
+    return null;
+  }
+
+  // 타입별 전용 후보 우선 → 공통 후보 폴백
+  const AMT_GENERAL  = ['실지급액','실지급','지급액','금액(원)','금액','amount','지출액','결제금액'];
+  const AMT_SLACK    = ['비용(원)','금액(원)','금액','비용','amount','지출액','결제금액','공급가액'];
+  const DATE_GENERAL = ['집행월','지출월','월','집행일','결제일','지출일','날짜','일자','date'];
+  const DATE_SLACK   = ['날짜','일자','결제일','지출일','발생일','집행월','월','date'];
+  const ITEM_GENERAL = ['비용항목','항목','내용','적요','세부내용','item','비용 항목'];
+  const ITEM_SLACK   = ['비용 항목','비용항목','항목','item','내용','적요'];
+  const FIRM_ALL     = ['업체명','업체','거래처','고객사','기관명','기관','학교명','학교','client','회사명'];
+  const EDU_ALL      = ['교육명','교육과정','과정명','프로그램명','프로젝트명','과정'];
+
+  const amtKey  = pick(type==='general'?AMT_GENERAL:AMT_SLACK);
+  const dateKey = pick(type==='general'?DATE_GENERAL:DATE_SLACK);
+  const itemKey = pick(type==='general'?ITEM_GENERAL:ITEM_SLACK);
+  const firmKey = pick(FIRM_ALL);
+  const eduKey  = pick(EDU_ALL);
+
+  console.log(`[CostSheet:${type}] 전체컬럼:`,keys);
+  console.log(`[CostSheet:${type}] 탐지→ amt:"${amtKey}" date:"${dateKey}" item:"${itemKey}" firm:"${firmKey}" edu:"${eduKey}"`);
+
+  // 금액/날짜 컬럼이 탐지 안된 경우 값 패턴으로 보조탐지
+  let resolvedAmtKey  = amtKey;
+  let resolvedDateKey = dateKey;
+
+  if(!resolvedAmtKey){
+    // 숫자 10000 이상이 가장 많은 컬럼
+    let best=-1,bestScore=0;
+    const sample10=rows.slice(0,20).filter(r=>Object.values(r).some(v=>v!==''&&v!==null));
+    keys.forEach(k=>{
+      const score=sample10.filter(r=>{
+        const v=r[k];
+        const n=typeof v==='number'?v:parseFloat(String(v||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+        return !isNaN(n)&&n>=1000;
+      }).length;
+      if(score>bestScore){bestScore=score;best=k;}
+    });
+    if(best) resolvedAmtKey=best;
+    console.log(`[CostSheet:${type}] amt 패턴탐지→ "${resolvedAmtKey}"`);
+  }
+
+  if(!resolvedDateKey){
+    // 월 파싱 가능한 값이 가장 많은 컬럼
+    let best=null,bestScore=0;
+    const sample10=rows.slice(0,20).filter(r=>Object.values(r).some(v=>v!==''&&v!==null));
+    keys.forEach(k=>{
+      if(k===resolvedAmtKey) return;
+      const score=sample10.filter(r=>{
+        const v=r[k];
+        return parseMonth(v)>=0;
+      }).length;
+      if(score>bestScore){bestScore=score;best=k;}
+    });
+    if(best&&bestScore>0) resolvedDateKey=best;
+    console.log(`[CostSheet:${type}] date 패턴탐지→ "${resolvedDateKey}" (${bestScore}건)`);
+  }
+
+  costSheetCache[type] = rows.map(row=>{
+    const firm = firmKey ? String(row[firmKey]||'').trim() : '';
+    const edu  = eduKey  ? String(row[eduKey]||'').trim()  : '';
+    const combined = [firm, edu].filter(Boolean).join(' ') ||
+      keys.filter(k=>k!==resolvedAmtKey&&k!==resolvedDateKey)
+          .map(k=>String(row[k]||'')).filter(Boolean).join(' ');
+    return {
+      _amt:      row[resolvedAmtKey]  ?? 0,
+      _item:     itemKey ? String(row[itemKey]||'').trim() : '',
+      _date:     resolvedDateKey ? row[resolvedDateKey] : '',
+      _firm:     firm,
+      _edu:      edu,
+      _combined: combined,
+      _type:     type,
+      ...row
+    };
+  });
+
+  // 일반비용 탭: 컬럼 탐지 현황 UI 표시
+  if(type==='general'){
+    const infoEl=document.getElementById('gen-col-info');
+    if(infoEl){
+      const dateHit=costSheetCache.general.filter(r=>parseMonth(r._date)>=0).length;
+      const firmHit=costSheetCache.general.filter(r=>r._firm&&r._firm.length>0).length;
+      const amtHit =costSheetCache.general.filter(r=>{
+        const n=typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+        return !isNaN(n)&&n>0;
+      }).length;
+      const total=costSheetCache.general.length;
+      const dateOk=dateHit>0, firmOk=firmHit>0, amtOk=amtHit>0;
+      infoEl.style.display='block';
+      infoEl.innerHTML=`
+        <strong style="color:#92400e">🔍 컬럼 자동 탐지 결과</strong><br>
+        ${amtOk?'✅':'⚠️'} <b>금액</b>: <code style="background:#f0f0ee;padding:0 4px;border-radius:2px">${resolvedAmtKey||'미탐지'}</code> → ${amtHit}/${total}행 반영
+        &nbsp;&nbsp;
+        ${dateOk?'✅':'⚠️'} <b>집행월</b>: <code style="background:#f0f0ee;padding:0 4px;border-radius:2px">${resolvedDateKey||'미탐지'}</code> → ${dateHit}/${total}행 반영
+        &nbsp;&nbsp;
+        ${firmOk?'✅':'⚠️'} <b>업체명</b>: <code style="background:#f0f0ee;padding:0 4px;border-radius:2px">${firmKey||'미탐지'}</code> → ${firmHit}/${total}행 반영
+        ${(!dateOk||!firmOk||!amtOk)?`<br><span style="color:#c0392b">⚠️ 미탐지 컬럼이 있습니다. 시트의 실제 헤더명을 확인해주세요.</span>`:''}
+      `;
+    }
+  }
+
+  applySheetCost();
+}
+
+// ── applySheetCost: 캐시 → EDU / FIRMS / ST 반영 ──
+// 핵심: 업체명 문자열 키로 집계 (인덱스 의존 제거 → FIRMS 재구성 후에도 정확)
+function applySheetCost(){
+  const allRows=[...costSheetCache.slack,...costSheetCache.general];
+  if(!allRows.length) return;
+
+  // ── 공통 정규화 (한 곳에서만 정의) ──
+  function nrm(s){
+    return String(s||'')
+      .replace(/\(.*?\)/g,'')          // 괄호 내용 제거
+      .replace(/주식회사|유한회사|학교법인|재단법인|사단법인/g,'')
+      .replace(/\s+/g,'')
+      .toLowerCase()
+      .trim();
+  }
+
+  // ── FIRMS 업체명 → 정규화키 맵 (현재 FIRMS 기준, 매번 재계산) ──
+  function buildFirmKeyMap(){
+    const map = new Map(); // normKey → FIRMS 인덱스
+    FIRMS.forEach((f,fi)=>{ map.set(nrm(f.name), fi); });
+    return map;
+  }
+
+  // ── 비용시트 행의 업체 문자열 → FIRMS 정규화키 매칭 ──
+  function resolveToFirmKey(firmStr, combined){
+    const candidates = [firmStr, combined].filter(s=>s&&s.trim().length>=2);
+    for(const str of candidates){
+      const ns = nrm(str);
+      if(ns.length < 2) continue;
+      // 1. 정확 일치
+      for(const [fn] of FIRMS.map((f,i)=>[nrm(f.name),i])){
+        if(ns === fn) return fn;
+      }
+      // 2. 포함 관계 (긴 것 우선)
+      let bestKey='', bestLen=0;
+      for(const f of FIRMS){
+        const fn=nrm(f.name);
+        if((ns.includes(fn)||fn.includes(ns)) && fn.length>bestLen){
+          bestLen=fn.length; bestKey=fn;
+        }
+      }
+      if(bestKey) return bestKey;
+      // 3. EDU.org 경유 (경남대 → 경남대학교)
+      for(const e of EDU){
+        const no=nrm(e.org);
+        if(no.length<2) continue;
+        if(ns===no||ns.includes(no)||no.includes(ns)){
+          // EDU.org → FIRMS 매칭
+          const matched=FIRMS.find(f=>nrm(f.name).includes(no)||no.includes(nrm(f.name)));
+          if(matched) return nrm(matched.name);
+        }
+      }
+      // 4. 앞 3글자 약칭
+      if(ns.length>=3){
+        for(const f of FIRMS){
+          const fn=nrm(f.name);
+          if(fn.startsWith(ns.slice(0,3))||ns.startsWith(fn.slice(0,3))) return fn;
+        }
+      }
+    }
+    return null;
+  }
+
+  // ── 초기화 ──
+  EDU.forEach(e=>{
+    if(e._fromSheet) return;
+    e._sheetTotal=0; e._sheetCats={}; e._sheetMonthly={};
+    EDU_CAT_MAP.forEach(c=>{ e._sheetCats[c.key]={total:0,subs:{}}; e._sheetMonthly[c.key]={}; });
+  });
+  // firmCostMap: 업체명 정규화키 → { monthly[12], total, noDate }
+  const newFirmCostMap = {};  // key → {monthly[12], total, noDate, displayName}
+  commonCostByMonth=Array(12).fill(0);
+  commonCostTotal=0;
+
+  // ── 행별 처리 ──
+  allRows.forEach(row=>{
+    const amtRaw=row._amt;
+    const n=typeof amtRaw==='number'?amtRaw
+      :parseFloat(String(amtRaw||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+    if(isNaN(n)||n<=0) return;
+
+    const itemStr = String(row._item||'').trim();
+    const cat     = catFromItem(itemStr);
+    const sub     = itemStr||'미분류';
+    const mi      = parseMonth(row._date);
+    const firmStr = String(row._firm||'').trim();
+    const combined= String(row._combined||'').trim();
+
+    // ① EDU 매칭 (패널 교육별 비용현황용)
+    const matchStr = firmStr||combined;
+    const ei = matchEduIdx(matchStr);
+    if(ei>=0){
+      EDU[ei]._sheetTotal+=n;
+      EDU[ei]._sheetCats[cat].total+=n;
+      EDU[ei]._sheetCats[cat].subs[sub]=(EDU[ei]._sheetCats[cat].subs[sub]||0)+n;
+      if(mi>=0&&mi<12){
+        if(!EDU[ei]._sheetMonthly[cat][mi]) EDU[ei]._sheetMonthly[cat][mi]={total:0,subs:{}};
+        EDU[ei]._sheetMonthly[cat][mi].total+=n;
+        EDU[ei]._sheetMonthly[cat][mi].subs[sub]=(EDU[ei]._sheetMonthly[cat][mi].subs[sub]||0)+n;
+      }
+    }
+
+    // ② FIRMS 매칭 → 업체명 키로 집계 (인덱스 의존 없음)
+    const firmKey = resolveToFirmKey(firmStr, combined);
+    if(firmKey){
+      if(!newFirmCostMap[firmKey]){
+        // displayName: FIRMS에서 찾거나 firmStr 사용
+        const matched=FIRMS.find(f=>nrm(f.name)===firmKey);
+        newFirmCostMap[firmKey]={
+          monthly:Array(12).fill(0),
+          total:0, noDate:0,
+          displayName: matched?matched.name:(firmStr||firmKey)
+        };
+      }
+      newFirmCostMap[firmKey].total+=n;
+      if(mi>=0&&mi<12){
+        newFirmCostMap[firmKey].monthly[mi]+=n;
+        commonCostByMonth[mi]+=n;
+      } else {
+        newFirmCostMap[firmKey].noDate+=n;
+      }
+    } else {
+      if(mi>=0&&mi<12) commonCostByMonth[mi]+=n;
+      commonCostTotal+=n;
+    }
+  });
+
+  // ── ST[fi].cost 갱신 (업체명 키 → 현재 FIRMS 인덱스로 매핑) ──
+  firmCostMap = {};  // 전역 firmCostMap도 인덱스 기반으로 동기화 (렌더용)
+  Object.entries(newFirmCostMap).forEach(([fkey, data])=>{
+    const fi = FIRMS.findIndex(f=>nrm(f.name)===fkey);
+    if(fi<0||fi>=ST.length) return;
+    firmCostMap[fi] = data;
+    const arr=[...data.monthly];
+    arr[12] = data.noDate||0;  // 인덱스 12: 날짜미정
+    ST[fi].cost = arr;
+    COST_SNAPSHOT[FIRMS[fi].name] = [...arr];
+  });
+
+  // 공통비용 합계
+  const mappedTotal=Object.values(newFirmCostMap).reduce((s,d)=>s+d.total,0);
+  const allTotal=allRows.reduce((s,r)=>{
+    const v=typeof r._amt==='number'?r._amt
+      :parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+    return s+(!isNaN(v)&&v>0?v:0);
+  },0);
+  commonCostTotal=Math.max(0,allTotal-mappedTotal);
+
+  // ── EDU items/tot 갱신 ──
+  const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  EDU.forEach((e,ei)=>{
+    if(e._fromSheet) return;
+    if(!e._sheetTotal){
+      if(ORIG_EDU[ei]){
+        e.tot=ORIG_EDU[ei].tot;
+        e.items=ORIG_EDU[ei].items.map(it=>({c:it.c,v:it.v,s:(it.s||[]).map(s=>({...s}))}));
+      }
+      return;
+    }
+    e.tot=Math.round(e._sheetTotal);
+    e.items=EDU_CAT_MAP.map(catDef=>{
+      const sc=e._sheetCats[catDef.key];
+      const sm=e._sheetMonthly[catDef.key];
+      const subs=[];
+      const mList=Object.keys(sm).map(Number).sort((a,b)=>a-b);
+      if(mList.length){
+        mList.forEach(mi=>{
+          const md=sm[mi];
+          subs.push({n:`📅 ${MONTHS[mi]}`,v:Math.round(md.total),_isHeader:true});
+          Object.entries(md.subs).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+            .forEach(([sn,sv])=>subs.push({n:`  └ ${sn}`,v:Math.round(sv)}));
+        });
+        const noDate={};
+        Object.entries(sc.subs).forEach(([sn,sv])=>{
+          if(!mList.some(mi=>sm[mi]?.subs[sn]>0)&&sv>0) noDate[sn]=(noDate[sn]||0)+sv;
+        });
+        if(Object.keys(noDate).length){
+          subs.push({n:'📅 날짜미정',v:Math.round(Object.values(noDate).reduce((a,b)=>a+b,0)),_isHeader:true});
+          Object.entries(noDate).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+            .forEach(([sn,sv])=>subs.push({n:`  └ ${sn}`,v:Math.round(sv)}));
+        }
+      } else {
+        Object.entries(sc.subs).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+          .forEach(([sn,sv])=>subs.push({n:`└ ${sn}`,v:Math.round(sv)}));
+      }
+      return {c:catDef.key,v:Math.round(sc.total),s:subs};
+    });
+  });
+
+  const idx=EDU.findIndex(e=>e._fromSheet); if(idx>=0) EDU.splice(idx,1);
+  mergeManual();  // 수기 입력값 병합 (시트값 없는 달만)
+  buildEdu();
+  renderFirmCostSummary();
+  upd();
+}
+
+
+/* ── 업체별 비용 집계 요약 렌더 (비용시트 패널 하단) ── */
+function renderFirmCostSummary(){
+  const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const hasCost=Object.keys(firmCostMap).length>0;
+  const html=hasCost?`
+    <div style="border:0.5px solid #e0e0de;border-radius:8px;overflow:hidden;margin-top:4px">
+      <div style="padding:7px 10px;background:#f0f6ff;border-bottom:0.5px solid #c5d8f5;font-size:10px;font-weight:700;color:#1a73e8">
+        📊 업체별 비용 집계 → 대시보드 3번 반영
+      </div>
+      <div style="overflow-x:auto;overflow-y:auto;max-height:260px">
+        <table class="sht" style="min-width:100%">
+          <thead style="position:sticky;top:0;z-index:2;background:#f9f9f7"><tr>
+            <th>업체명</th>
+            ${MONTHS.map(m=>`<th style="text-align:right">${m}</th>`).join('')}
+            <th style="text-align:right;color:#c0392b">합계</th>
+          </tr></thead><tbody>
+          ${Object.entries(firmCostMap).map(([fiStr,data])=>{
+            const fi=parseInt(fiStr);
+            const name=data.displayName||FIRMS[fi]?.name||'?';
+            const tot=data.total||data.monthly.reduce((s,v)=>s+v,0);
+            return `<tr>
+              <td style="font-weight:600">${name} <span style="font-size:8px;background:#fce8e6;color:#c0392b;padding:1px 4px;border-radius:2px">시트</span></td>
+              ${data.monthly.slice(0,12).map(v=>`<td style="text-align:right;${v>0?'color:#c0392b':'color:#ddd'}">${v>0?v.toLocaleString('ko-KR'):'—'}</td>`).join('')}
+              <td style="text-align:right;font-weight:700;color:#c0392b">${data.total?data.total.toLocaleString('ko-KR'):'—'}${data.noDate>0?`<br><span style="font-size:8px;color:#e65100">날짜미정 ${data.noDate.toLocaleString('ko-KR')}</span>`:''}
+              </td>
+            </tr>`;
+          }).join('')}
+          ${commonCostTotal>0?`<tr style="background:#fffdf0">
+            <td style="color:#888;font-size:10px;font-style:italic">📋 미분류 공통비용</td>
+            ${commonCostByMonth.map(v=>`<td style="text-align:right;${v>0?'color:#e65100':'color:#ddd'}">${v>0?v.toLocaleString('ko-KR'):'—'}</td>`).join('')}
+            <td style="text-align:right;font-weight:700;color:#e65100">${commonCostTotal.toLocaleString('ko-KR')}</td>
+          </tr>`:''}
+        </tbody></table>
+      </div>
+    </div>`:'';
+  ['slack-firm-summary','gen-firm-summary'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML=html;
+  });
+}
+
+const EDU=[
+  {org:'한경닷컴',name:'프로젝트 기반 UXUI 디자인 실전 캠프 과정 5기',period:'4월 13일 ~ 8월 10일',st:'ing',tot:107286982,
+   items:[{c:'🍽️ 식대',v:95100,s:[{n:'교육용 간식/음료',v:95100}]},{c:'🚗 교통비',v:0,s:[]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:906498,s:[{n:'교육생용 리소스/툴 구독',v:906498}]},{c:'📚 교육/마케팅',v:38204664,s:[{n:'교육생 시상비용',v:116964},{n:'마케팅 대행사',v:38087700}]},{c:'🏢 기타',v:3920,s:[{n:'우편비',v:3920}]},{c:'🧑‍🏫 강사비',v:68076800,s:[{n:'강사비',v:68076800}]}]},
+  {org:'성균관대',name:'SKKU AWS SAY 2기',period:'2025.12.04 ~ 2026.05.28',st:'done',tot:62057620,
+   items:[{c:'🍽️ 식대',v:467900,s:[{n:'출장식대',v:59900},{n:'교육용 간식/음료',v:408000}]},{c:'🚗 교통비',v:0,s:[]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:0,s:[]},{c:'📚 교육/마케팅',v:0,s:[]},{c:'🏢 기타',v:4040,s:[{n:'각종 사무용품',v:4040}]},{c:'🧑‍🏫 강사비',v:61585680,s:[{n:'강사비',v:60425280},{n:'심사비',v:1160400}]}]},
+  {org:'경남대',name:'경남대 일머리사관학교',period:'26.6.30 ~ 7.24',st:'plan',tot:15084587,
+   items:[{c:'🍽️ 식대',v:158610,s:[{n:'교육용 간식/음료',v:158610}]},{c:'🚗 교통비',v:441613,s:[{n:'출장교통비',v:441613}]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:0,s:[]},{c:'📚 교육/마케팅',v:848000,s:[{n:'교육생 시상비용',v:400000},{n:'교육생 굿즈 제작',v:448000}]},{c:'🏢 기타',v:0,s:[]},{c:'🧑‍🏫 강사비',v:13636364,s:[{n:'강사비',v:13636364}]}]},
+  {org:'경남대',name:'경남대 자격증교육',period:'7월 마지막주',st:'plan',tot:0,items:[{c:'🍽️ 식대',v:0,s:[]},{c:'🚗 교통비',v:0,s:[]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:0,s:[]},{c:'📚 교육/마케팅',v:0,s:[]},{c:'🏢 기타',v:0,s:[]},{c:'🧑‍🏫 강사비',v:0,s:[]}]},
+  {org:'경남대',name:'경남대 교원교육',period:'8월중',st:'plan',tot:0,items:[{c:'🍽️ 식대',v:0,s:[]},{c:'🚗 교통비',v:0,s:[]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:0,s:[]},{c:'📚 교육/마케팅',v:0,s:[]},{c:'🏢 기타',v:0,s:[]},{c:'🧑‍🏫 강사비',v:0,s:[]}]},
+  {org:'동국대',name:'AI 활용 범죄예방 역량강화 교육',period:'7.14 ~ 8.7',st:'plan',tot:0,items:[{c:'🍽️ 식대',v:0,s:[]},{c:'🚗 교통비',v:0,s:[]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:0,s:[]},{c:'📚 교육/마케팅',v:0,s:[]},{c:'🏢 기타',v:0,s:[]},{c:'🧑‍🏫 강사비',v:0,s:[]}]},
+  {org:'한기대',name:'직업계고 현장체험 프로그램',period:'7.15, 7.23',st:'plan',tot:0,items:[{c:'🍽️ 식대',v:0,s:[]},{c:'🚗 교통비',v:0,s:[]},{c:'🏘️ 숙박비',v:0,s:[]},{c:'💻 IT/장비',v:0,s:[]},{c:'📚 교육/마케팅',v:0,s:[]},{c:'🏢 기타',v:0,s:[]},{c:'🧑‍🏫 강사비',v:0,s:[]}]},
+];
+// 원본 EDU 데이터 스냅샷 (시트 갱신으로 덮어쓰기 전 원본 보존)
+const ORIG_EDU = EDU.map(e => ({
+  tot: e.tot,
+  items: e.items.map(it => ({
+    c: it.c, v: it.v,
+    s: (it.s||[]).map(s => ({...s}))
+  }))
+}));
+function buildEdu(){
+  const list=document.getElementById('edu-list'); list.innerHTML='';
+  let tot=0,done=0,ing=0,plan=0;
+  EDU.forEach((e,i)=>{
+    tot+=e.tot;
+    if(e.st==='done')done++;else if(e.st==='ing')ing++;else plan++;
+    const stM={done:['완료','st-done'],ing:['진행중','st-ing'],plan:['예정','st-plan']};
+    const [sl,sc]=stM[e.st];
+    const active=e.items.filter(it=>it.v>0);
+    const fromSheet=!!e._sheetTotal; // 시트에서 데이터 받은 경우
+
+    // 항목별 HTML
+    const itemsHtml = active.length===0
+      ? `<div style="font-size:11px;color:#bbb;padding:10px 0;text-align:center">
+           ${fromSheet?'시트에서 매칭된 비용 항목이 없습니다':'아직 지출 내역이 없습니다'}
+         </div>`
+      : active.map(it=>{
+          const subsHtml=(it.s||[]).filter(s=>s.v>0).map(s=>{
+            if(s._isHeader) return `
+              <div class="sub-row" style="margin-top:5px;background:#f0f6ff;border-radius:4px;padding:3px 6px">
+                <span class="sub-l" style="color:#1a73e8;font-weight:700;font-size:10px">${s.n}</span>
+                <span class="sub-v" style="color:#1a73e8;font-weight:700">${s.v.toLocaleString('ko-KR')}원</span>
+              </div>`;
+            return `
+              <div class="sub-row" style="padding-left:20px">
+                <span class="sub-l">${s.n.trim()}</span>
+                <span class="sub-v">${s.v.toLocaleString('ko-KR')}</span>
+              </div>`;
+          }).join('');
+          return `
+            <div class="item-hd">
+              <span class="item-l">${it.c}</span>
+              <span class="item-v">${it.v.toLocaleString('ko-KR')}원</span>
+            </div>
+            <div>${subsHtml}</div>`;
+        }).join('');
+
+    // 총 지출 + 시트연동 뱃지
+    const totalHtml = e.tot>0 ? `
+      <div style="margin-top:10px;padding:8px 10px;background:#fff8f8;border-radius:6px;border:0.5px solid #f5c6c6;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:#888;font-weight:600">총 지출비용
+          ${fromSheet?`<span style="margin-left:4px;font-size:8px;background:#e6f4ea;color:#1e7e34;padding:1px 5px;border-radius:3px;font-weight:700">📡 시트 자동반영</span>`:''}
+        </span>
+        <span style="font-size:14px;font-weight:700;color:#c0392b">${e.tot.toLocaleString('ko-KR')}원</span>
+      </div>` : '';
+
+    const bl=document.createElement('div'); bl.className='edu-block';
+    bl.innerHTML=`
+      <div class="edu-hd" onclick="toggleEdu(${i})">
+        <div style="min-width:0">
+          <div class="edu-title">${e.org} — ${e.name}</div>
+          <div class="edu-sub">${e.period}</div>
+        </div>
+        <div class="edu-r">
+          <div class="edu-tot">${e.tot?e.tot.toLocaleString('ko-KR')+'원':'—'}</div>
+          <span class="stb ${sc}">${sl}</span>
+          <span class="chv" id="chv${i}">▾</span>
+        </div>
+      </div>
+      <div class="edu-body" id="eb${i}">
+        ${itemsHtml}
+        ${totalHtml}
+      </div>`;
+    list.appendChild(bl);
+  });
+  document.getElementById('c-tot').textContent=tot?tot.toLocaleString('ko-KR'):'—';
+  document.getElementById('c-ing').textContent=ing+'개';
+  document.getElementById('c-done').textContent=done+'개';
+  document.getElementById('c-plan').textContent=plan+'개';
+}
+function toggleEdu(i){ document.getElementById('eb'+i).classList.toggle('open'); document.getElementById('chv'+i).classList.toggle('open'); }
+
+/* ─────────────────────────────────────
+   손익 대시보드 (3→2→1)
+───────────────────────────────────── */
+const P25=[18463636,6747801,0,7246701,0,33363636,53939394,0,67767650,0,0,0];
+const S25=187528818;
+const NOTE=['','','','7월 2개월분 예정','','','넥클 매출스루',''];
+const FIRMS=[
+  {name:'경남대학교',         rev:[18181818,40909090,0,0,0,0,0,0,0,0,0,0],cost:[2679916,19918129,0,0,0,0,0,0,0,0,0,0]},
+  {name:'강남AI스쿨',        rev:[1545455,1454545,1181818,1454545,0,0,0,0,0,0,0,0],cost:[386800,773600,364800,773600,0,0,0,0,0,0,0,0]},
+  {name:'성균관대KDT',       rev:[0,0,0,20000000,16363636,18181818,0,0,0,0,0,0],cost:[1856640,6508800,17280100,20498100,14555040,0,0,0,0,0,0,0]},
+  {name:'한경KDT',           rev:[0,0,0,0,0,0,0,0,0,0,0,0],cost:[0,12289883,20652106,32466320,9126364,3163519,0,0,0,0,0,0]},
+  {name:'카이스트',           rev:[0,0,0,74475455,0,0,0,0,0,0,0,0],cost:[0,0,0,69019719,0,0,0,0,0,0,0,0]},
+  {name:'동국대학교',         rev:[0,0,0,0,17818182,0,0,0,0,0,0,0],cost:[0,0,0,0,17395297,0,0,0,0,0,0,0]},
+  {name:'연성대학교',         rev:[0,30406364,0,0,0,0,0,0,0,0,0,0],cost:[0,30406364,0,0,0,0,0,0,0,0,0,0]},
+  {name:'한국환경산업기술원', rev:[0,0,0,0,0,46363636,0,0,0,0,0,0],cost:[0,0,0,0,0,0,0,0,0,0,0,0]},
+];
+const ST=FIRMS.map(f=>({rev:[...f.rev],cost:[...f.cost]}));
+// ── 수기 입력값 저장소 ──
+// localStorage에 저장 → 새로고침 후에도 유지
+const LS_KEY = 'pl_dashboard_manual_v1';
+
+function loadManual(){
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if(!saved) return null;
+    const obj = JSON.parse(saved);
+    // FIRMS 구성이 바뀌었을 경우 대비: 업체명 키로 저장
+    return obj; // { firmName: { rev:[12], cost:[12] } }
+  } catch(e){ return null; }
+}
+
+function saveManual(){
+  try {
+    const obj = {};
+    FIRMS.forEach((f,fi)=>{
+      const rv = MANUAL_REV[fi];
+      const cv = MANUAL_COST[fi];
+      if(rv.some(v=>v>0) || cv.some(v=>v>0)){
+        obj[f.name] = { rev:[...rv], cost:[...cv] };
+      }
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
+  } catch(e){}
+}
+
+// 초기화: FIRMS 크기 기준으로 배열 생성 후 localStorage 값 복원
+const MANUAL_REV  = FIRMS.map(()=>Array(12).fill(0));
+const MANUAL_COST = FIRMS.map(()=>Array(12).fill(0));
+(function restoreManual(){
+  const saved = loadManual();
+  if(!saved) return;
+  FIRMS.forEach((f,fi)=>{
+    const entry = saved[f.name];
+    if(!entry) return;
+    if(Array.isArray(entry.rev))  entry.rev.forEach((v,m)=>{ if(v>0) MANUAL_REV[fi][m]=v; });
+    if(Array.isArray(entry.cost)) entry.cost.forEach((v,m)=>{ if(v>0) MANUAL_COST[fi][m]=v; });
+  });
+})();
+// 초기 비용 스냅샷 — 매출 시트 갱신 시 비용 데이터 보존용
+const COST_SNAPSHOT={};
+FIRMS.forEach(f=>{ COST_SNAPSHOT[f.name]=[...f.cost]; });
+
+// ── mergeManual: 시트 재로드 후 수기값을 ST에 병합 ──
+// FIRMS 인덱스가 바뀌어도 업체명 기준으로 정확히 매핑
+function mergeManual(){
+  FIRMS.forEach((f,fi)=>{
+    const rv = MANUAL_REV[fi]  || [];
+    const cv = MANUAL_COST[fi] || [];
+    for(let m=0;m<12;m++){
+      // 수기값 우선순위:
+      //   수기값 > 0 AND (시트값 없거나, 수기값이 시트값을 override 중) → 수기값 사용
+      //   그 외 → 시트값 유지
+      if(rv[m]>0) ST[fi].rev[m]  = rv[m];  // 수기값이 있으면 무조건 우선
+      else if(!ST[fi].rev[m]) ST[fi].rev[m] = 0;
+      if(cv[m]>0) ST[fi].cost[m] = cv[m];  // 수기값이 있으면 무조건 우선
+      // cost 시트값은 applySheetCost가 이미 ST[fi].cost에 반영했으므로
+      // 수기값이 없으면 기존 시트값 유지
+    }
+  });
+}
+
+/* ── 정적 룩업 테이블: 페이지 로드 시 1회 구축 ──
+   EDU.org → FIRMS index 매핑
+   "경남대" → 0 (경남대학교)
+   시트 교육명 매칭에 사용
+*/
+function _nrm(s){ return String(s||'').replace(/\s+/g,'').toLowerCase(); }
+
+// { eduOrg: firmIdx } — EDU.org 기준으로 가장 가까운 FIRMS 찾기
+const EDU_ORG_FIRM_MAP = {};
+EDU.forEach(e => {
+  if(e._fromSheet) return;
+  if(EDU_ORG_FIRM_MAP[e.org] !== undefined) return; // 이미 처리됨
+  const no = _nrm(e.org);
+  let bestFi = -1;
+  // FIRMS.name에 EDU.org 포함 (경남대학교 includes 경남대)
+  for(let fi=0;fi<FIRMS.length;fi++){
+    if(_nrm(FIRMS[fi].name).includes(no)){ bestFi=fi; break; }
+  }
+  // EDU.org에 FIRMS.name 포함 (역방향)
+  if(bestFi<0){
+    for(let fi=0;fi<FIRMS.length;fi++){
+      if(no.includes(_nrm(FIRMS[fi].name))){ bestFi=fi; break; }
+    }
+  }
+  // 앞 3글자로 매칭
+  if(bestFi<0 && no.length>=3){
+    for(let fi=0;fi<FIRMS.length;fi++){
+      if(_nrm(FIRMS[fi].name).startsWith(no.slice(0,3))){ bestFi=fi; break; }
+    }
+  }
+  if(bestFi>=0) EDU_ORG_FIRM_MAP[e.org]=bestFi;
+});
+
+// 시트 교육명 → FIRMS index
+function eduOrgToFirm(eduStr){
+  if(!eduStr) return -1;
+  const ne=_nrm(eduStr);
+  if(ne.length<2) return -1;
+  // 1. FIRMS.name 직접 포함
+  for(let fi=0;fi<FIRMS.length;fi++){
+    const nf=_nrm(FIRMS[fi].name);
+    if(ne.includes(nf)||nf.includes(ne)) return fi;
+  }
+  // 2. EDU.org 경유
+  for(const [org, fi] of Object.entries(EDU_ORG_FIRM_MAP)){
+    if(ne.includes(_nrm(org))||_nrm(org).includes(ne)) return fi;
+  }
+  return -1;
+}
+
+// FIRMS별 교육기간 월 Set: { firmIdx: Set<monthIdx> }
+const EDU_ORG_PERIODS = {};
+EDU.forEach(e => {
+  if(e._fromSheet) return;
+  const fi = EDU_ORG_FIRM_MAP[e.org];
+  if(fi===undefined) return;
+  if(!EDU_ORG_PERIODS[fi]) EDU_ORG_PERIODS[fi]=new Set();
+  // period 파싱: "26.6.30 ~ 7.24", "6월 29일 ~ 7월 3일", "4월 13일 ~ 8월 10일"
+  const nums=(String(e.period||'').match(/(1[0-2]|[1-9])(?:월|\.)/g)||[]);
+  nums.forEach(v=>{ const m=parseInt(v.replace(/[^\d]/g,'')); if(m>=1&&m<=12) EDU_ORG_PERIODS[fi].add(m-1); });
+});
+// 슬랙+일반 시트 공통비용 (업체 미분류)
+let commonCostByMonth = Array(12).fill(0);
+let commonCostTotal   = 0;
+let firmCostMap       = {}; // 비용시트에서 집계된 FIRMS별 월별 비용
+const sm=a=>a.reduce((s,x)=>s+x,0);
+function fmt(n){return n===0?'—':(n<0?'-':'')+Math.abs(n).toLocaleString('ko-KR');}
+function fmtS(n){const v=Math.abs(n).toLocaleString('ko-KR');return n>0?`<span class="pos">+${v}</span>`:n<0?`<span class="neg">-${v}</span>`:`<span class="neu">0</span>`;}
+function pct(r,c){if(!r)return'<span class="neg">—</span>';const p=(r-c)/r*100,t=p.toFixed(1)+'%';return p>=50?`<span class="pos">${t} ✅</span>`:p>=0?`<span class="warn">${t} 🟡</span>`:`<span class="neg">${t} 🔴</span>`;}
+function normFirmName(n){
+  return String(n||'').replace(/\(.*?\)/g,'').replace(/\s+/g,'')
+    .replace(/(주식회사|유한회사|학교법인|재단법인|사단법인)/g,'').toLowerCase().trim();
+}
+/* ST/FIRMS를 업체명 기준으로 그룹핑해 합산한 배열을 반환 */
+function groupedFirms(){
+  const map = new Map(); // normName → { name, rev[12], cost[12] }
+  ST.forEach((st, fi) => {
+    const key = normFirmName(FIRMS[fi].name);
+    if(map.has(key)){
+      const g = map.get(key);
+      st.rev.forEach((v,m)=>{ g.rev[m]+=v; });
+      st.cost.forEach((v,m)=>{ g.cost[m]+=v; });
+    } else {
+      map.set(key, { name: FIRMS[fi].name, rev:[...st.rev], cost:[...st.cost] });
+    }
+  });
+  return [...map.values()];
+}
+function buildT3(){
+  const b=document.getElementById('b3'); b.innerHTML='';
+  const groups = groupedFirms();
+  groups.forEach((g, fi)=>{
+    [['매출','rev'],['비용','cost']].forEach(([lbl,kind],ri)=>{
+      const tr=document.createElement('tr');
+      if(!ri){
+        const td=document.createElement('td');td.rowSpan=2;td.className='name L';td.textContent=g.name;tr.appendChild(td);
+      }
+      const tk=document.createElement('td');tk.className=kind;
+      if(kind==='rev'){
+        const hasSheetRev = g.rev.some(v=>v>0);
+        const hasManualRev = MANUAL_REV[fi]?.some(v=>v>0);
+        tk.innerHTML=`매출`
+          +(hasSheetRev?` <span style="font-size:8px;background:#e8f5e9;color:#2e7d32;padding:1px 4px;border-radius:3px;font-weight:600">시트</span>`:'')
+          +(hasManualRev&&!hasSheetRev?` <span style="font-size:8px;background:#f0fff4;color:#1e7d32;padding:1px 4px;border-radius:3px;font-weight:600">수기</span>`:'');
+      } else {
+        const hasCostBadge = Object.keys(firmCostMap||{}).some(fi2=>{
+          const fn = FIRMS[parseInt(fi2)]?.name;
+          return fn && normFirmName(fn)===normFirmName(g.name);
+        });
+        if(hasCostBadge) tk.innerHTML=`비용 <span style="font-size:8px;background:#fce8e6;color:#c0392b;padding:1px 4px;border-radius:3px;font-weight:600">시트</span>`;
+        else tk.textContent='비용';
+      }
+      tr.appendChild(tk);
+      const arr=kind==='rev'?g.rev:g.cost;
+      const hasCostSheet = kind==='cost' && Object.keys(firmCostMap||{}).some(fi2=>{
+        const fn = FIRMS[parseInt(fi2)]?.name;
+        return fn && normFirmName(fn)===normFirmName(g.name);
+      });
+      for(let m=0;m<12;m++){
+        const td=document.createElement('td');
+        const inp=document.createElement('input');
+        inp.type='number';
+        inp.dataset.fi=fi; inp.dataset.m=m; inp.dataset.kind=kind; inp.dataset.grouped='1';
+
+        if(kind==='rev'){
+          const sheetVal  = arr[m]||0;
+          const manualVal = MANUAL_REV[fi]?.[m]||0;
+          // override: 수기값이 있고 시트값과 다를 때
+          const isOverride = manualVal>0 && sheetVal>0 && manualVal!==sheetVal;
+          const dispVal = isOverride ? manualVal : (sheetVal||manualVal);
+          inp.value = dispVal||'';
+          inp.placeholder='';
+          inp.dataset.sheetVal=sheetVal;
+          if(isOverride){
+            // 수기로 시트값 덮어씀
+            inp.className='override-rev';
+            inp.title=`✏️ 수기 수정값: ${manualVal.toLocaleString('ko-KR')}
+📡 시트 원본: ${sheetVal.toLocaleString('ko-KR')}
+(초기화하려면 값을 지우세요)`;
+          } else if(sheetVal>0){
+            inp.className='sheet-rev';
+            inp.readOnly=false; // 수정 가능
+            inp.title=`📡 시트 자동반영: ${sheetVal.toLocaleString('ko-KR')}
+✏️ 직접 입력하면 수기값으로 덮어씁니다`;
+          } else if(manualVal>0){
+            inp.className='manual-rev';
+            inp.title='✏️ 수기 입력값 (시트 미연동)';
+          } else {
+            inp.placeholder='입력';
+          }
+        } else {
+          const sheetVal  = arr[m]||0;
+          const manualVal = MANUAL_COST[fi]?.[m]||0;
+          const isOverride = manualVal>0 && sheetVal>0 && manualVal!==sheetVal;
+          const dispVal = isOverride ? manualVal : (sheetVal||manualVal);
+          inp.value = dispVal||'';
+          inp.placeholder='';
+          inp.dataset.sheetVal=sheetVal;
+          if(isOverride){
+            inp.className='override-cost';
+            inp.title=`✏️ 수기 수정값: ${manualVal.toLocaleString('ko-KR')}
+📡 시트 원본: ${sheetVal.toLocaleString('ko-KR')}
+(초기화하려면 값을 지우세요)`;
+          } else if(sheetVal>0 && hasCostSheet){
+            inp.className='sheet-cost';
+            inp.title=`📡 비용시트 자동반영: ${sheetVal.toLocaleString('ko-KR')}
+✏️ 직접 입력하면 수기값으로 덮어씁니다`;
+          } else if(manualVal>0){
+            inp.className='manual-cost';
+            inp.title='✏️ 수기 입력값 (시트 미연동)';
+          } else {
+            inp.placeholder='입력';
+          }
+        }
+        inp.addEventListener('input',onInp);
+        td.appendChild(inp);
+        tr.appendChild(td);
+      }
+      const ts=document.createElement('td');ts.id=`s3_${fi}_${kind}`;
+      ts.className=kind==='rev'?'sub':'sub-c';
+      const subtotal=sm(arr);
+      const noDateAmt=(kind==='cost'&&arr[12]>0)?arr[12]:0;
+      if(noDateAmt>0){
+        ts.innerHTML=`${fmt(subtotal)}<br><span style="font-size:8px;color:#e65100;font-weight:400">날짜미정 ${noDateAmt.toLocaleString('ko-KR')} 포함</span>`;
+      } else {
+        ts.textContent=fmt(subtotal);
+      }
+      tr.appendChild(ts);
+      b.appendChild(tr);
+    });
+  });
+  // 슬랙+일반 공통비용 행 (시트 연동 시에만 표시)
+  if(commonCostTotal > 0){
+    const tr=document.createElement('tr');tr.style.background='#fff8f8';
+    const td0=document.createElement('td');td0.textContent='📋 비용시트 연동';td0.className='L';td0.style.cssText='color:#888;font-size:10px;font-style:italic';tr.appendChild(td0);
+    const tk=document.createElement('td');tk.innerHTML='비용 <span style="font-size:8px;background:#fce8e6;color:#c0392b;padding:1px 3px;border-radius:2px;font-weight:600">시트</span>';tk.className='cost';tr.appendChild(tk);
+    for(let m=0;m<12;m++){
+      const td=document.createElement('td');
+      td.style.cssText=commonCostByMonth[m]>0?'color:#c0392b;font-size:10px':'color:#ddd;font-size:10px';
+      td.textContent=commonCostByMonth[m]>0?commonCostByMonth[m].toLocaleString('ko-KR'):'—';
+      tr.appendChild(td);
+    }
+    const ts=document.createElement('td');ts.className='sub-c';ts.style.fontSize='10px';ts.textContent=fmt(commonCostTotal);tr.appendChild(ts);
+    b.appendChild(tr);
+  }
+  ['rev','cost','profit'].forEach(kind=>{
+    const tr=document.createElement('tr');tr.className='total-row';
+    const td0=document.createElement('td');td0.colSpan=2;td0.className='L';
+    td0.textContent=kind==='rev'?'월별 매출 합계':kind==='cost'?'월별 비용 합계':'월별 이익 합계';
+    if(kind==='rev')td0.style.color='#1a73e8';if(kind==='cost')td0.style.color='#c0392b';
+    tr.appendChild(td0);
+    for(let m=0;m<12;m++){const td=document.createElement('td');td.id=`t_${kind}_${m}`;tr.appendChild(td);}
+    const ts=document.createElement('td');ts.id=`t_${kind}_s`;tr.appendChild(ts);
+    b.appendChild(tr);
+  });
+}
+function upd(){
+  const groups = groupedFirms();
+  // 3번 소계 + 매출 td 텍스트 업데이트
+  groups.forEach((g,fi)=>{
+    ['rev','cost'].forEach(kind=>{
+      const arr=kind==='rev'?g.rev:g.cost;
+      const el=document.getElementById(`s3_${fi}_${kind}`);
+      if(!el) return;
+      const subtotal=sm(arr);
+      const noDateAmt=(kind==='cost'&&arr[12]>0)?arr[12]:0;
+      if(noDateAmt>0){
+        el.innerHTML=`${fmt(subtotal)}<br><span style="font-size:8px;color:#e65100;font-weight:400">날짜미정 ${noDateAmt.toLocaleString('ko-KR')} 포함</span>`;
+      } else {
+        el.textContent=fmt(subtotal);
+      }
+    });
+    // 매출/비용 input 값 갱신 (시트 재로드 후 buildT3 없이 즉시 반영)
+    for(let m=0;m<12;m++){
+      ['rev','cost'].forEach(kind=>{
+        const inps = document.querySelectorAll(`input[data-fi="${fi}"][data-m="${m}"][data-kind="${kind}"]`);
+        inps.forEach(inp=>{
+          if(document.activeElement===inp) return; // 편집 중 갱신 방지
+          const sheetVal  = kind==='rev' ? (g.rev[m]||0) : (g.cost[m]||0);
+          const manualVal = kind==='rev' ? (MANUAL_REV[fi]?.[m]||0) : (MANUAL_COST[fi]?.[m]||0);
+          const isOverride = manualVal>0 && sheetVal>0 && manualVal!==sheetVal;
+          const dispVal = isOverride ? manualVal : (sheetVal||manualVal);
+          inp.value = dispVal||'';
+          inp.dataset.sheetVal = sheetVal;
+          if(isOverride){
+            inp.className = kind==='rev' ? 'override-rev' : 'override-cost';
+            inp.title=`✏️ 수기 수정값: ${manualVal.toLocaleString('ko-KR')}
+📡 시트 원본: ${sheetVal.toLocaleString('ko-KR')}`;
+          } else if(sheetVal>0){
+            inp.className = kind==='rev' ? 'sheet-rev' : 'sheet-cost';
+            inp.title=`📡 ${kind==='rev'?'매출':'비용'}시트 자동반영: ${sheetVal.toLocaleString('ko-KR')}
+✏️ 직접 입력하면 수기값으로 덮어씁니다`;
+          } else if(manualVal>0){
+            inp.className = kind==='rev' ? 'manual-rev' : 'manual-cost';
+            inp.title='✏️ 수기 입력값';
+          } else {
+            inp.className=''; inp.title='';
+          }
+        });
+      });
+    }
+  });
+  // 3번 월별 합계 행 (공통비용 포함)
+  for(let m=0;m<12;m++){
+    const r=groups.reduce((a,g)=>a+g.rev[m],0);
+    const c=groups.reduce((a,g)=>a+g.cost[m],0) + commonCostByMonth[m];
+    const er=document.getElementById(`t_rev_${m}`),ec=document.getElementById(`t_cost_${m}`),ep=document.getElementById(`t_profit_${m}`);
+    if(er){er.textContent=fmt(r);er.style.color=r?'#1a73e8':'';}
+    if(ec){ec.textContent=fmt(c);ec.style.color=c?'#c0392b':'';}
+    if(ep)ep.innerHTML=fmtS(r-c);
+  }
+  const gR=groups.reduce((a,g)=>a+sm(g.rev),0);
+  const gC=groups.reduce((a,g)=>a+sm(g.cost),0) + commonCostTotal;
+  ['rev','cost','profit'].forEach(kind=>{
+    const el=document.getElementById(`t_${kind}_s`);if(!el)return;
+    const v=kind==='rev'?gR:kind==='cost'?gC:gR-gC;
+    if(kind==='profit')el.innerHTML=fmtS(v);
+    else{el.textContent=fmt(v);el.style.color=kind==='rev'?'#1a73e8':'#c0392b';}
+  });
+  // 2번 업체별 테이블
+  const b2=document.getElementById('b2'); b2.innerHTML='';
+  let gRv2=0,gCt2=0;
+  groups.forEach((g,fi)=>{
+    const r=sm(g.rev),c=sm(g.cost);gRv2+=r;gCt2+=c;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="L" style="color:#aaa">${fi+1}</td><td class="L name">${g.name}</td><td style="color:#1a73e8">${fmt(r)}</td><td style="color:#c0392b">${fmt(c)}</td><td>${fmtS(r-c)}</td><td>${pct(r,c)}</td>`;
+    b2.appendChild(tr);
+  });
+  // 공통비용 행 (비용시트 연동)
+  if(commonCostTotal>0){
+    const tcr=document.createElement('tr');tcr.style.background='#fff8f8';
+    tcr.innerHTML=`<td class="L" style="color:#ccc">—</td><td class="L" style="color:#888;font-size:10px;font-style:italic">📋 비용시트 연동</td><td style="color:#aaa">—</td><td style="color:#c0392b;font-size:10px">${fmt(commonCostTotal)}</td><td>—</td><td>—</td>`;
+    b2.appendChild(tcr);
+    gCt2 += commonCostTotal;
+  }
+  const tt=document.createElement('tr');tt.className='total-row';
+  tt.innerHTML=`<td class="L"></td><td class="L">합계</td><td style="color:#1a73e8">${fmt(gRv2)}</td><td style="color:#c0392b">${fmt(gCt2)}</td><td>${fmtS(gRv2-gCt2)}</td><td>${pct(gRv2,gCt2)}</td>`;
+  b2.appendChild(tt);
+  // 1번 연간 합계·전년비
+  document.getElementById('s26').textContent=gRv2?gRv2.toLocaleString('ko-KR'):'—';
+  const yEl=document.getElementById('syoy');
+  if(!gRv2){yEl.textContent='—';yEl.style.color='#aaa';}
+  else{const y=(gRv2-S25)/S25*100;yEl.innerHTML=y>=0?`<span class="pos">+${y.toFixed(1)}%</span>`:`<span class="neg">${y.toFixed(1)}%</span>`;}
+  // 1번 월별 달성 테이블
+  const mRA=Array.from({length:12},(_,m)=>groups.reduce((a,g)=>a+g.rev[m],0));
+  const b1=document.getElementById('b1'); b1.innerHTML='';
+  [{label:'2025년 달성금액',arr:P25,total:S25,color:'#888',fw:'400'},{label:'2026년 발행금액',arr:mRA,total:gRv2,color:'#1a73e8',fw:'700'}]
+  .forEach(({label,arr,total,color,fw})=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="L" style="color:${color};font-weight:${fw}">${label}</td>`+arr.map(v=>`<td style="color:${color};font-weight:${fw}">${v?v.toLocaleString('ko-KR'):'—'}</td>`).join('')+`<td style="color:${color};font-weight:700">${total?total.toLocaleString('ko-KR'):'—'}</td>`;
+    b1.appendChild(tr);
+  });
+}
+// 수기 입력 전체 초기화
+function clearManualAll(){
+  if(!confirm('수기 입력한 모든 값을 삭제하시겠습니까?\n시트에서 자동 반영된 값은 유지됩니다.')) return;
+  FIRMS.forEach((_,fi)=>{
+    MANUAL_REV[fi].fill(0);
+    MANUAL_COST[fi].fill(0);
+    // ST도 원래 시트값으로 복원
+    for(let m=0;m<12;m++){
+      ST[fi].rev[m]  = FIRMS[fi].rev[m]  || 0;
+      ST[fi].cost[m] = FIRMS[fi].cost[m] || 0;
+    }
+  });
+  localStorage.removeItem(LS_KEY);
+  buildT3(); upd();
+}
+
+function onInp(e){
+  const inp=e.target;
+  const fi=+inp.dataset.fi, m=+inp.dataset.m, kind=inp.dataset.kind;
+  const userVal  = +inp.value||0;
+  const sheetVal = +inp.dataset.sheetVal||0;
+
+  if(kind==='rev'){
+    if(userVal===0 || userVal===sheetVal){
+      // 값을 지우거나 시트값과 같으면 → override 해제, 시트값 복원
+      MANUAL_REV[fi][m] = 0;
+      ST[fi].rev[m] = sheetVal;
+      inp.className = sheetVal>0 ? 'sheet-rev' : '';
+      inp.title     = sheetVal>0 ? `📡 시트 자동반영: ${sheetVal.toLocaleString('ko-KR')}
+✏️ 직접 입력하면 수기값으로 덮어씁니다` : '';
+      if(sheetVal>0) inp.value=sheetVal; // 빈칸 → 시트값으로 복원
+    } else {
+      // 수기 입력 → ST에 반영
+      MANUAL_REV[fi][m] = userVal;
+      ST[fi].rev[m] = userVal; // 수기값으로 덮어씀 (시트보다 우선)
+      if(sheetVal>0){
+        inp.className='override-rev';
+        inp.title=`✏️ 수기 수정값: ${userVal.toLocaleString('ko-KR')}
+📡 시트 원본: ${sheetVal.toLocaleString('ko-KR')}
+(초기화하려면 값을 지우세요)`;
+      } else {
+        inp.className='manual-rev';
+        inp.title='✏️ 수기 입력값 (시트 미연동)';
+      }
+    }
+  } else { // cost
+    if(userVal===0){
+      // 비용: 값 지우면 → override 해제, 시트값 복원
+      MANUAL_COST[fi][m] = 0;
+      ST[fi].cost[m] = sheetVal;
+      const hasCostSheet = !!sheetVal;
+      inp.className = hasCostSheet ? 'sheet-cost' : '';
+      inp.title     = hasCostSheet ? `📡 비용시트 자동반영: ${sheetVal.toLocaleString('ko-KR')}
+✏️ 직접 입력하면 수기값으로 덮어씁니다` : '';
+      if(sheetVal>0) inp.value=sheetVal;
+    } else {
+      MANUAL_COST[fi][m] = userVal;
+      ST[fi].cost[m] = userVal;
+      if(sheetVal>0 && userVal!==sheetVal){
+        inp.className='override-cost';
+        inp.title=`✏️ 수기 수정값: ${userVal.toLocaleString('ko-KR')}
+📡 시트 원본: ${sheetVal.toLocaleString('ko-KR')}
+(초기화하려면 값을 지우세요)`;
+      } else {
+        inp.className='manual-cost';
+        inp.title='✏️ 수기 입력값 (시트 미연동)';
+      }
+    }
+  }
+  saveManual();
+  upd();
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   결재내역 패널
+   - costSheetCache (slack + general) 데이터 사용
+   - 업체명 + 교육명 + 결제수단(법인카드/개인카드) 기준으로 그룹핑
+   - 스크린샷 레이아웃: 법카 테이블 | 개인카드 테이블 나란히
+   - xlsx 내보내기 (SheetJS)
+═══════════════════════════════════════════════════════ */
+
+// ── 결제수단 분류 ──
+function classifyPayMethod(row){
+  // 결제수단 컬럼 직접 탐색
+  const PAY_KEYS=['결제수단','결제방법','지급수단','pay','payment','카드종류'];
+  for(const k of Object.keys(row)){
+    if(PAY_KEYS.some(p=>_nm(k).includes(_nm(p)))){
+      const v=String(row[k]||'').toLowerCase();
+      if(v.includes('법인')||v.includes('법카')||v.includes('corp')) return '법인카드';
+      if(v.includes('개인')||v.includes('personal'))                 return '개인카드';
+      if(v) return v; // 그 외 값 그대로
+    }
+  }
+  // 값에서 추론
+  const all=Object.values(row).map(v=>String(v||'').toLowerCase()).join(' ');
+  if(all.includes('법인카드')||all.includes('법카')) return '법인카드';
+  if(all.includes('개인카드'))                       return '개인카드';
+  return '기타';
+}
+
+// ── 날짜 표시용 포맷 ──
+function fmtDate(val){
+  if(!val||val===''||val==='—') return '—';
+  const s=String(val).trim();
+  // Date(2026,5,26) → 2026-06-26
+  const dm=s.match(/Date\((\d{4}),(\d{1,2}),(\d{1,2})\)/);
+  if(dm) return `${dm[1]}-${String(parseInt(dm[2])+1).padStart(2,'0')}-${String(dm[3]).padStart(2,'0')}`;
+  // 이미 날짜 형식
+  const ds=s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if(ds) return `${ds[1]}-${ds[2].padStart(2,'0')}-${ds[3].padStart(2,'0')}`;
+  return s;
+}
+
+// ── 패널 열기 ──
+function openReceiptPanel(){
+  const w=applyPanelW('receipt-panel');
+  document.getElementById('ov').classList.add('show');
+  document.getElementById('receipt-panel').classList.add('open');
+  if(window.innerWidth>900){
+    document.getElementById('main').classList.add('shifted');
+    document.getElementById('main').style.marginRight=w+'px';
+  }
+  const allRows=[...costSheetCache.slack,...costSheetCache.general];
+
+  // 업체·교육명 셀렉트 채우기
+  const firms=new Set(), edus=new Set();
+  allRows.forEach(r=>{
+    if(r._firm) firms.add(r._firm);
+    if(r._edu)  edus.add(r._edu);
+  });
+  const fSel=document.getElementById('receipt-firm-sel');
+  const eSel=document.getElementById('receipt-edu-sel');
+  fSel.innerHTML='<option value="">전체</option>'+[...firms].sort().map(f=>`<option value="${f}">${f}</option>`).join('');
+  eSel.innerHTML='<option value="">전체</option>'+[...edus].sort().map(e=>`<option value="${e}">${e}</option>`).join('');
+
+  // 월 셀렉트 (동적)
+  const mSel=document.getElementById('receipt-month-sel');
+  mSel.innerHTML='<option value="">전체</option>'+
+    Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join('');
+
+  renderReceipt();
+}
+function closeReceiptPanel(){
+  document.getElementById('receipt-panel').classList.remove('open');
+  document.getElementById('ov').classList.remove('show');
+  document.getElementById('main').classList.remove('shifted');
+  document.getElementById('main').style.marginRight='';
+}
+
+// ── 결재내역 렌더링 ──
+function renderReceipt(){
+  const firmFilter  = document.getElementById('receipt-firm-sel').value;
+  const eduFilter   = document.getElementById('receipt-edu-sel').value;
+  const monthFilter = +document.getElementById('receipt-month-sel').value||0;
+
+  let rows=[...costSheetCache.slack,...costSheetCache.general].filter(r=>{
+    const n=typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+    if(isNaN(n)||n<=0) return false;
+    if(firmFilter  && r._firm!==firmFilter)   return false;
+    if(eduFilter   && r._edu!==eduFilter)     return false;
+    if(monthFilter){ const mi=parseMonth(r._date); if(mi+1!==monthFilter) return false; }
+    return true;
+  });
+
+  // 업체명 → 교육명 → 결제수단 3단계 그룹핑
+  const grouped=new Map(); // firmName → Map(eduName → {법인카드:[], 개인카드:[], 기타:[]})
+  rows.forEach(r=>{
+    const firm = r._firm||'(미분류)';
+    const edu  = r._edu ||r._item||'(교육명 미지정)';
+    const pay  = classifyPayMethod(r);
+    if(!grouped.has(firm)) grouped.set(firm,new Map());
+    const eduMap=grouped.get(firm);
+    if(!eduMap.has(edu)) eduMap.set(edu,{'법인카드':[],'개인카드':[],'기타':[]});
+    const payMap=eduMap.get(edu);
+    if(!payMap[pay]) payMap[pay]=[];
+    payMap[pay].push(r);
+  });
+
+  // 요약
+  const totalAmt=rows.reduce((s,r)=>{
+    const n=typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+    return s+(!isNaN(n)&&n>0?n:0);
+  },0);
+  document.getElementById('receipt-summary').innerHTML=
+    `<strong>${rows.length}건</strong> · 합계 <strong style="color:#c0392b">${Math.round(totalAmt).toLocaleString('ko-KR')}원</strong>`;
+
+  if(!rows.length){
+    document.getElementById('receipt-body').innerHTML='<div style="text-align:center;color:#bbb;padding:40px">조건에 맞는 지출 내역이 없습니다</div>';
+    return;
+  }
+
+  let html='';
+  grouped.forEach((eduMap,firm)=>{
+    html+=`<div style="margin-bottom:24px">
+      <div style="font-size:13px;font-weight:700;color:#1a1a19;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #e0e0de">
+        🏢 ${firm}
+      </div>`;
+    eduMap.forEach((payMap,edu)=>{
+      const pays=Object.entries(payMap).filter(([,arr])=>arr.length>0);
+      if(!pays.length) return;
+      const eduTotal=pays.reduce((s,[,arr])=>s+arr.reduce((ss,r)=>{
+        const n=typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+        return ss+(!isNaN(n)?n:0);
+      },0),0);
+      html+=`<div style="margin-bottom:16px;background:#fff;border-radius:8px;border:0.5px solid #e0e0de;overflow:hidden">
+        <div style="padding:8px 12px;background:#f5f5f3;border-bottom:0.5px solid #e8e8e6;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:700;color:#333">📚 ${edu}</span>
+          <span style="font-size:11px;font-weight:700;color:#c0392b">${Math.round(eduTotal).toLocaleString('ko-KR')}원</span>
+        </div>
+        <div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">`;
+
+      pays.forEach(([payLabel,arr])=>{
+        const isLegal=payLabel==='법인카드';
+        const color=isLegal?'#1a73e8':'#7b1fa2';
+        const bg=isLegal?'#e8f0fe':'#f3e5f5';
+        const payTotal=arr.reduce((s,r)=>{
+          const n=typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+          return s+(!isNaN(n)?n:0);
+        },0);
+
+        html+=`<div style="border:1px solid ${color}22;border-radius:6px;overflow:hidden">
+          <div style="padding:6px 10px;background:${bg};display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:${color}">${isLegal?'💳':'🪪'} ${payLabel}</span>
+            <span style="font-size:10px;font-weight:700;color:${color}">${Math.round(payTotal).toLocaleString('ko-KR')}원</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <thead><tr style="background:#fafaf8">
+              <th style="padding:4px 7px;text-align:left;color:#888;border-bottom:0.5px solid #eee;white-space:nowrap">지출일자</th>
+              <th style="padding:4px 7px;text-align:left;color:#888;border-bottom:0.5px solid #eee;white-space:nowrap">비용 항목</th>
+              <th style="padding:4px 7px;text-align:left;color:#888;border-bottom:0.5px solid #eee">사유</th>
+              <th style="padding:4px 7px;text-align:right;color:#888;border-bottom:0.5px solid #eee;white-space:nowrap">비용(원)</th>
+            </tr></thead>
+            <tbody>`;
+
+        arr.sort((a,b)=>{ // 날짜 오름차순
+          const ma=parseMonth(a._date), mb=parseMonth(b._date);
+          return ma-mb;
+        }).forEach((r,ri)=>{
+          const amt=typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,''));
+          // 사유 컬럼 탐색
+          const REASON_KEYS=['사유','내용','적요','description','reason','note','비고'];
+          let reason='';
+          for(const k of Object.keys(r)){
+            if(k.startsWith('_')) continue;
+            if(REASON_KEYS.some(rk=>_nm(k).includes(_nm(rk)))){ reason=String(r[k]||''); break; }
+          }
+          html+=`<tr style="background:${ri%2?'#fafaf8':'#fff'}">
+            <td style="padding:4px 7px;white-space:nowrap;color:#555">${fmtDate(r._date)}</td>
+            <td style="padding:4px 7px;white-space:nowrap">
+              <span style="background:#e8f0fe;color:#1a73e8;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:600">${r._item||'—'}</span>
+            </td>
+            <td style="padding:4px 7px;color:#333;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${reason}">${reason||'—'}</td>
+            <td style="padding:4px 7px;text-align:right;font-weight:600;color:#c0392b;white-space:nowrap">${isNaN(amt)?'—':Math.round(amt).toLocaleString('ko-KR')}</td>
+          </tr>`;
+        });
+        // 소계
+        html+=`<tr style="background:#f5f5f3;font-weight:700">
+          <td colspan="3" style="padding:4px 7px;text-align:right;color:#888;font-size:10px">소계</td>
+          <td style="padding:4px 7px;text-align:right;color:${color}">${Math.round(payTotal).toLocaleString('ko-KR')}</td>
+        </tr>`;
+        html+=`</tbody></table></div>`;
+      });
+      html+=`</div></div>`; // grid + edu-block
+    });
+    html+=`</div>`; // firm block
+  });
+
+  document.getElementById('receipt-body').innerHTML=html;
+  document.getElementById('receipt-subtitle').textContent=
+    `${firmFilter||'전체 업체'} · ${monthFilter?monthFilter+'월':'전체 월'} · ${rows.length}건`;
+}
+
+/* ── xlsx 내보내기: 화면에 보이는 그대로 내보내기 ── */
+function exportReceiptXlsx(){
+  if(!window.XLSX){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>_doExportXlsx();
+    document.head.appendChild(s);
+  } else {
+    _doExportXlsx();
+  }
+}
+
+function _doExportXlsx(){
+  const XLSX=window.XLSX;
+  const REASON_KEYS=['사유','내용','적요','description','reason','note','비고'];
+
+  function getAmt(r){ return typeof r._amt==='number'?r._amt:parseFloat(String(r._amt||'').replace(/[,\s원]/g,'').replace(/[^0-9.-]/g,'')); }
+  function getReason(r){ for(const k of Object.keys(r)){ if(k.startsWith('_')) continue; if(REASON_KEYS.some(rk=>_nm(k).includes(_nm(rk)))) return String(r[k]||''); } return ''; }
+
+  // ── 현재 화면 필터와 동일하게 rows 수집 ──
+  const firmFilter  = document.getElementById('receipt-firm-sel').value;
+  const eduFilter   = document.getElementById('receipt-edu-sel').value;
+  const monthFilter = +document.getElementById('receipt-month-sel').value||0;
+
+  const rows=[...costSheetCache.slack,...costSheetCache.general].filter(r=>{
+    const n=getAmt(r); if(isNaN(n)||n<=0) return false;
+    if(firmFilter  && r._firm!==firmFilter)   return false;
+    if(eduFilter   && r._edu!==eduFilter)     return false;
+    if(monthFilter){ const mi=parseMonth(r._date); if(mi+1!==monthFilter) return false; }
+    return true;
+  });
+
+  // ── 화면과 동일한 그룹핑: 업체 → 교육명 → 결제수단 ──
+  const grouped=new Map();
+  rows.forEach(r=>{
+    const firm=r._firm||'(미분류)';
+    const edu =r._edu||r._item||'(교육명 미지정)';
+    const pay =classifyPayMethod(r);
+    if(!grouped.has(firm)) grouped.set(firm,new Map());
+    const eduMap=grouped.get(firm);
+    if(!eduMap.has(edu)) eduMap.set(edu,{'법인카드':[],'개인카드':[],'기타':[]});
+    const pm=eduMap.get(edu); if(!pm[pay]) pm[pay]=[];
+    pm[pay].push(r);
+  });
+
+  const wb=XLSX.utils.book_new();
+
+  // ── 시트1: 결재내역 (화면 레이아웃 그대로) ──
+  const aoa=[];
+
+  // 파일 제목 행
+  const titleParts=[];
+  if(firmFilter)  titleParts.push(firmFilter);
+  if(eduFilter)   titleParts.push(eduFilter);
+  if(monthFilter) titleParts.push(monthFilter+'월');
+  aoa.push([`결재내역서${titleParts.length?' — '+titleParts.join(' · '):''}`, '', '', '', '']);
+  const today=new Date();
+  aoa.push([`출력일: ${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`, '', '', '', '']);
+  aoa.push(['', '', '', '', '']);
+
+  let grandTotal=0;
+
+  grouped.forEach((eduMap, firm)=>{
+    // 업체 헤더
+    aoa.push([`■ ${firm}`, '', '', '', '']);
+    aoa.push(['', '', '', '', '']);
+
+    eduMap.forEach((payMap, edu)=>{
+      const pays=Object.entries(payMap).filter(([,arr])=>arr.length>0);
+      if(!pays.length) return;
+
+      const eduTotal=pays.reduce((s,[,arr])=>s+arr.reduce((ss,r)=>{ const n=getAmt(r); return ss+(!isNaN(n)?n:0); },0), 0);
+      grandTotal+=eduTotal;
+
+      // 교육명 헤더
+      aoa.push([`  ▶ ${edu}`, '', '', '', `${Math.round(eduTotal).toLocaleString('ko-KR')}원`]);
+      aoa.push(['', '', '', '', '']);
+
+      pays.forEach(([payLabel, arr])=>{
+        const isLegal=payLabel==='법인카드';
+        const payTotal=arr.reduce((s,r)=>{ const n=getAmt(r); return s+(!isNaN(n)?n:0); }, 0);
+
+        // 결제수단 헤더
+        aoa.push([`    ${isLegal?'💳':'🪪'} ${payLabel}`, '', '', '', `${Math.round(payTotal).toLocaleString('ko-KR')}원`]);
+        // 컬럼 헤더
+        aoa.push(['    지출일자', '비용 항목', '사유', '', '비용(원)']);
+
+        // 행 데이터 (날짜 오름차순)
+        [...arr].sort((a,b)=>{ const da=fmtDate(a._date),db=fmtDate(b._date); return da<db?-1:da>db?1:0; })
+          .forEach(r=>{
+            const amt=getAmt(r);
+            aoa.push([
+              `    ${fmtDate(r._date)}`,
+              r._item||'—',
+              getReason(r)||'—',
+              '',
+              isNaN(amt)?0:Math.round(amt)
+            ]);
+          });
+
+        // 소계
+        aoa.push(['', '', '', '소계', Math.round(payTotal)]);
+        aoa.push(['', '', '', '', '']);
+      });
+      aoa.push(['', '', '', '', '']);
+    });
+  });
+
+  // 합계
+  aoa.push(['', '', '', '', '']);
+  aoa.push(['합  계', '', '', '', Math.round(grandTotal)]);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+
+  // 열 너비
+  ws['!cols']=[{wch:18},{wch:16},{wch:42},{wch:8},{wch:15}];
+
+  // 금액 셀 숫자 서식 (E열)
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1');
+  for(let R=range.s.r; R<=range.e.r; R++){
+    const cell=ws[XLSX.utils.encode_cell({r:R,c:4})];
+    if(cell && typeof cell.v==='number') cell.z='#,##0';
+  }
+
+  // 병합: 제목/업체명/합계 행
+  ws['!merges']=[];
+  aoa.forEach((row,ri)=>{
+    const v=String(row[0]||'');
+    if(v.startsWith('결재내역서')||v.startsWith('출력일')||v.startsWith('■')||v==='합  계'){
+      ws['!merges'].push({s:{r:ri,c:0},e:{r:ri,c:3}});
+    }
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws, '결재내역');
+
+  // ── 시트2: 원본데이터 (상세 목록) ──
+  const raw=[['업체명','교육명','결제수단','지출일자','비용항목','사유','비용(원)']];
+  rows.sort((a,b)=>{
+    const fc=(a._firm||'').localeCompare(b._firm||'','ko'); if(fc) return fc;
+    const ec=(a._edu||'').localeCompare(b._edu||'','ko');  if(ec) return ec;
+    return fmtDate(a._date)<fmtDate(b._date)?-1:1;
+  }).forEach(r=>{
+    const amt=getAmt(r);
+    raw.push([r._firm||'',r._edu||'',classifyPayMethod(r),fmtDate(r._date),r._item||'',getReason(r),isNaN(amt)?0:Math.round(amt)]);
+  });
+  const wsRaw=XLSX.utils.aoa_to_sheet(raw);
+  wsRaw['!cols']=[{wch:14},{wch:24},{wch:10},{wch:13},{wch:14},{wch:42},{wch:13}];
+  // 금액 서식
+  const rawRange=XLSX.utils.decode_range(wsRaw['!ref']||'A1');
+  for(let R=1;R<=rawRange.e.r;R++){
+    const c=wsRaw[XLSX.utils.encode_cell({r:R,c:6})];
+    if(c&&typeof c.v==='number') c.z='#,##0';
+  }
+  XLSX.utils.book_append_sheet(wb, wsRaw, '원본데이터');
+
+  // 파일명: 필터 조건 포함
+  const fparts=['결재내역'];
+  if(firmFilter) fparts.push(firmFilter);
+  if(monthFilter) fparts.push(monthFilter+'월');
+  fparts.push(`${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`);
+  XLSX.writeFile(wb, fparts.join('_')+'.xlsx');
+}
+
+
+/* ── 패널 리사이즈 드래그 ── */
+function startPanelResize(e, panel){
+  e.preventDefault();
+  const handle = e.currentTarget;
+  handle.classList.add('dragging');
+  const startX   = e.clientX;
+  const startW   = panel.getBoundingClientRect().width;
+  const panelId  = panel.id;
+
+  function onMove(ev){
+    const dx  = startX - ev.clientX;   // 왼쪽으로 드래그 = 넓어짐
+    const newW = Math.max(320, Math.min(startW + dx, window.innerWidth * 0.97));
+    panel.style.width = newW + 'px';
+    panel.style.transition = 'none';
+    if(document.getElementById('main').classList.contains('shifted'))
+      document.getElementById('main').style.marginRight = newW + 'px';
+  }
+
+  function onUp(ev){
+    handle.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    panel.style.transition = '';
+    // 너비 저장
+    const finalW = panel.getBoundingClientRect().width;
+    localStorage.setItem('pw_' + panelId, Math.round(finalW));
+    // 더블클릭 리셋 안 됐을 때 대비 cursor 복원
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.body.style.cursor    = 'col-resize';
+  document.body.style.userSelect = 'none';
+}
+
+/* 핸들 더블클릭 → 기본 너비 복원 */
+document.addEventListener('dblclick', function(e){
+  const handle = e.target.closest('.panel-resize-handle');
+  if(!handle) return;
+  const panel = handle.closest('.panel');
+  if(!panel) return;
+  const defaultW = PANEL_DEFAULT_W[panel.id] || 580;
+  setPanelW(panel.id, defaultW);
+});
+
+/* ─────────────────────────────────────
+   초기화 — 페이지 로드 시 모든 연동 즉시 시작
+───────────────────────────────────── */
+mergeManual();  // 저장된 수기값 초기 반영
+buildEdu(); buildT3(); upd();
+// 슬랙·일반 비용 시트: 즉시 fetch + 자동갱신 타이머
+startAuto('slack');
+startAuto('general');
+// 매출일정표: 즉시 fetch + 자동갱신 타이머
+fetchRevSheet();
+startRevAuto();
+</script>
+</body>
+</html>
